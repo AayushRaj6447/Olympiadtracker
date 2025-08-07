@@ -1,270 +1,194 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Olympiad Book Tracker</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 15px;
-      background-color: #f9f9f9;
-    }
-    h2 {
-      margin-bottom: 5px;
-    }
-    .button-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 10px;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button.active {
-      background-color: #4CAF50;
-      color: white;
-    }
-    #summary, #totals {
-      margin-top: 15px;
-      background: #fff;
-      padding: 10px;
-      border: 1px solid #ccc;
-    }
-    .nav-buttons {
-      margin-top: 10px;
-    }
-    .nav-buttons button {
-      margin-right: 5px;
-    }
-    select {
-      padding: 5px;
-      font-size: 14px;
-    }
+    body { font-family: sans-serif; padding: 20px; }
+    button { margin: 5px; padding: 10px 15px; font-size: 16px; }
+    .selected { background-color: lightgreen; }
+    #summary, #classSubjectSummary { margin-top: 30px; white-space: pre; font-family: monospace; background: #f4f4f4; padding: 15px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
+  <h2>Olympiad Book Order Tracker</h2>
 
-  <h2>📘 Olympiad Book Tracker</h2>
+  <label for="classSelect">Select Class:</label>
+  <select id="classSelect">
+    <option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option>
+    <option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option>
+  </select>
+  <br><br>
+
   <div>
-    <b>Class:</b>
-    <select id="classSelector" onchange="changeClass(this.value)">
-      <option value="0">I</option>
-      <option value="1">II</option>
-      <option value="2">III</option>
-      <option value="3">IV</option>
-      <option value="4">V</option>
-      <option value="5">VI</option>
-      <option value="6">VII</option>
-      <option value="7">VIII</option>
-      <option value="8">IX</option>
-      <option value="9">X</option>
-    </select>
-
-    &nbsp;&nbsp;
-
-    <b>Student ID:</b>
-    <select id="studentSelector" onchange="changeStudent(this.value)">
-      <!-- Populated by JS -->
-    </select>
+    <button onclick="prevStudent()">⏮ Previous</button>
+    <span id="studentIdDisplay">I_1</span>
+    <button onclick="nextStudent()">Next ⏭</button>
   </div>
 
-  <div class="button-grid" id="subjectButtons"></div>
-
-  <div class="nav-buttons">
-    <button onclick="prevStudent()">⬅️ Prev</button>
-    <button onclick="nextStudent()">➡️ Next</button>
-    <button onclick="resetStudent()">🗑️ Reset This Student</button>
-    <button onclick="resetAll()">❌ Reset All</button>
-    <button onclick="downloadExcel()">📥 Export Excel</button>
+  <h3>Select Subjects</h3>
+  <div id="subjects">
+    <button onclick="toggleSubject('GK')">GK</button>
+    <button onclick="toggleSubject('English')">English</button>
+    <button onclick="toggleSubject('Science')">Science</button>
+    <button onclick="toggleSubject('Maths')">Maths</button>
+    <button onclick="toggleSubject('Computer')">Computer</button>
+    <button onclick="toggleSubject('Social Studies')">Social Studies</button>
+    <button onclick="toggleSubject('Hindi')">Hindi</button>
+    <button onclick="toggleSubject('Reasoning')">Reasoning</button>
   </div>
+
+  <br>
+  <button onclick="clearStudent()">❌ Clear This Student</button>
+  <button onclick="resetAll()">🔁 Reset All</button>
+  <button onclick="downloadExcel()">📥 Download Excel</button>
 
   <div id="summary"></div>
-  <div id="totals"></div>
+  <div id="classSubjectSummary"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
-    const classes = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-    const maxStudentsPerClass = 30;
     const subjects = ["GK", "English", "Science", "Maths", "Computer", "Social Studies", "Hindi", "Reasoning"];
-    const subjectPrices = {
-      "GK": 100, "English": 100, "Science": 100, "Maths": 100,
-      "Computer": 100, "Social Studies": 100, "Hindi": 100, "Reasoning": 250
-    };
-    const formPrice = 150;
+    let currentClass = "I";
+    let currentIndex = 1;
+    let data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
 
-    let currentClassIndex = 0;
-    let currentStudentIndex = 0;
-    let data = JSON.parse(localStorage.getItem('olympiadData')) || {};
+    const studentIdDisplay = document.getElementById("studentIdDisplay");
+    const classSelect = document.getElementById("classSelect");
+    const subjectButtons = document.querySelectorAll("#subjects button");
+    const summaryDiv = document.getElementById("summary");
+    const classSummaryDiv = document.getElementById("classSubjectSummary");
 
-    function getStudentID() {
-      return `${classes[currentClassIndex]}_${currentStudentIndex + 1}`;
+    classSelect.addEventListener("change", () => {
+      currentClass = classSelect.value;
+      currentIndex = 1;
+      updateStudentDisplay();
+    });
+
+    function updateStudentDisplay() {
+      const id = `${currentClass}_${currentIndex}`;
+      studentIdDisplay.textContent = id;
+      updateSubjectButtons();
+      updateSummary();
     }
 
-    function renderStudentSelector() {
-      const sel = document.getElementById("studentSelector");
-      sel.innerHTML = "";
-      for (let i = 1; i <= maxStudentsPerClass; i++) {
-        const opt = document.createElement("option");
-        opt.value = i - 1;
-        opt.textContent = i;
-        sel.appendChild(opt);
-      }
-      sel.value = currentStudentIndex;
-    }
-
-    function renderButtons() {
-      const container = document.getElementById('subjectButtons');
-      container.innerHTML = "";
-      subjects.forEach(subject => {
-        const btn = document.createElement('button');
-        btn.textContent = subject;
-        btn.onclick = () => toggleSubject(subject);
-        if (data[getStudentID()]?.includes(subject)) {
-          btn.classList.add("active");
-        }
-        container.appendChild(btn);
-      });
+    function getCurrentID() {
+      return `${currentClass}_${currentIndex}`;
     }
 
     function toggleSubject(subject) {
-      const id = getStudentID();
+      const id = getCurrentID();
       data[id] = data[id] || [];
       if (data[id].includes(subject)) {
         data[id] = data[id].filter(s => s !== subject);
       } else {
         data[id].push(subject);
       }
-      localStorage.setItem('olympiadData', JSON.stringify(data));
-      renderButtons();
-      renderSummary();
-      renderTotals();
+      localStorage.setItem("olympiadData", JSON.stringify(data));
+      updateSubjectButtons();
+      updateSummary();
     }
 
-    function renderSummary() {
-      const id = getStudentID();
-      const books = data[id] || [];
-      let bookTotal = books.reduce((sum, sub) => sum + subjectPrices[sub], 0);
-      const fullTotal = bookTotal + formPrice;
-
-      document.getElementById("summary").innerHTML = `
-        <b>Selected Subjects:</b> ${books.join(", ") || "None"}<br>
-        <b>Book Price:</b> ₹${bookTotal} | <b>Form Price:</b> ₹${formPrice}<br>
-        <b>Total for ${id}:</b> ₹${fullTotal}
-      `;
-    }
-
-    function renderTotals() {
-      let totalBooks = 0, totalReasoning = 0, totalForms = 0, grandTotal = 0;
-      let classBookCount = {}, subjectCount = {};
-      classes.forEach(cls => classBookCount[cls] = 0);
-      subjects.forEach(sub => subjectCount[sub] = 0);
-
-      Object.keys(data).forEach(id => {
-        const [cls, num] = id.split("_");
-        const subs = data[id];
-        if (!subs || subs.length === 0) return;
-        classBookCount[cls] += subs.length;
-        totalForms++;
-        subs.forEach(sub => {
-          subjectCount[sub]++;
-          grandTotal += subjectPrices[sub];
-        });
+    function updateSubjectButtons() {
+      const id = getCurrentID();
+      const selected = data[id] || [];
+      subjectButtons.forEach(btn => {
+        if (selected.includes(btn.textContent)) {
+          btn.classList.add("selected");
+        } else {
+          btn.classList.remove("selected");
+        }
       });
-
-      grandTotal += totalForms * formPrice;
-
-      let report = `<b>📊 Overall Totals:</b><br>`;
-      report += `<b>Total Forms:</b> ${totalForms} (₹${totalForms * formPrice})<br>`;
-      report += `<b>Total Books:</b> ${Object.values(subjectCount).reduce((a,b)=>a+b,0)} (₹${grandTotal - totalForms * formPrice})<br>`;
-      report += `<b>Grand Total:</b> ₹${grandTotal}<br><br>`;
-
-      report += `<b>Subjects Ordered:</b><br>`;
-      subjects.forEach(s => report += `${s}: ${subjectCount[s]}<br>`);
-
-      report += `<br><b>Class-wise Book Count:</b><br>`;
-      classes.forEach(c => report += `${c}: ${classBookCount[c]}<br>`);
-
-      document.getElementById("totals").innerHTML = report;
-    }
-
-    function nextStudent() {
-      if (currentStudentIndex < maxStudentsPerClass - 1) {
-        currentStudentIndex++;
-      } else if (currentClassIndex < classes.length - 1) {
-        currentClassIndex++;
-        currentStudentIndex = 0;
-      }
-      refresh();
     }
 
     function prevStudent() {
-      if (currentStudentIndex > 0) {
-        currentStudentIndex--;
-      } else if (currentClassIndex > 0) {
-        currentClassIndex--;
-        currentStudentIndex = maxStudentsPerClass - 1;
+      if (currentIndex > 1) {
+        currentIndex--;
+        updateStudentDisplay();
       }
-      refresh();
     }
 
-    function resetStudent() {
-      const id = getStudentID();
+    function nextStudent() {
+      if (currentIndex < 150) {
+        currentIndex++;
+        updateStudentDisplay();
+      }
+    }
+
+    function clearStudent() {
+      const id = getCurrentID();
       delete data[id];
-      localStorage.setItem('olympiadData', JSON.stringify(data));
-      refresh();
+      localStorage.setItem("olympiadData", JSON.stringify(data));
+      updateSubjectButtons();
+      updateSummary();
     }
 
     function resetAll() {
-      if (confirm("Are you sure you want to delete ALL data?")) {
-        localStorage.removeItem('olympiadData');
+      if (confirm("Are you sure you want to delete all data?")) {
         data = {};
-        refresh();
+        localStorage.removeItem("olympiadData");
+        updateStudentDisplay();
+        updateSummary();
       }
     }
 
-    function changeClass(index) {
-      currentClassIndex = parseInt(index);
-      refresh();
-    }
+    function updateSummary() {
+      let totalBooks = 0, totalReasoning = 0, totalForms = 0, totalAmount = 0;
+      const subjectCounts = {}, classWise = {};
 
-    function changeStudent(index) {
-      currentStudentIndex = parseInt(index);
-      refresh();
-    }
+      for (let id in data) {
+        const cls = id.split("_")[0];
+        classWise[cls] = classWise[cls] || {};
+        totalForms++;
+        data[id].forEach(sub => {
+          const price = sub === "Reasoning" ? 250 : 100;
+          totalAmount += price;
+          totalBooks++;
+          if (sub === "Reasoning") totalReasoning++;
+          subjectCounts[sub] = (subjectCounts[sub] || 0) + 1;
+          classWise[cls][sub] = (classWise[cls][sub] || 0) + 1;
+        });
+      }
 
-    function refresh() {
-      document.getElementById("classSelector").value = currentClassIndex;
-      document.getElementById("studentSelector").value = currentStudentIndex;
-      renderStudentSelector();
-      renderButtons();
-      renderSummary();
-      renderTotals();
+      summaryDiv.innerHTML =
+        `📘 Total Books: ${totalBooks}\n` +
+        `🧠 Reasoning Books: ${totalReasoning}\n` +
+        `📄 Total Forms: ${totalForms}\n` +
+        `💰 Total Book Amount: ₹${totalAmount}\n` +
+        `🧾 Total Form Amount: ₹${totalForms * 150}\n` +
+        `💵 Grand Total: ₹${totalAmount + totalForms * 150}\n` +
+        `\n📊 Subject-wise Counts:\n` +
+        subjects.map(s => `${s.padEnd(15)}: ${subjectCounts[s] || 0}`).join("\n");
+
+      classSummaryDiv.innerHTML = `📚 Class-wise Subject Distribution:\n\n`;
+
+      for (let cls in classWise) {
+        classSummaryDiv.innerHTML += `Class ${cls}:\n`;
+        subjects.forEach(s => {
+          classSummaryDiv.innerHTML += `  ${s.padEnd(15)}: ${classWise[cls][s] || 0}\n`;
+        });
+        classSummaryDiv.innerHTML += "\n";
+      }
     }
 
     function downloadExcel() {
-      let csv = "Student ID,Class,Subjects,Books Cost,Form Cost,Total\n";
-      Object.keys(data).forEach(id => {
-        const subs = data[id] || [];
+      const rows = [["Student ID", "Class", "Subjects", "Books Amount", "Form Amount", "Total"]];
+      for (let id in data) {
         const cls = id.split("_")[0];
-        const bookTotal = subs.reduce((sum, s) => sum + subjectPrices[s], 0);
-        const total = bookTotal + formPrice;
-        csv += `${id},${cls},"${subs.join(", ")}",${bookTotal},${formPrice},${total}\n`;
-      });
+        const subjectsList = data[id];
+        const bookAmt = subjectsList.reduce((sum, sub) => sum + (sub === "Reasoning" ? 250 : 100), 0);
+        const total = bookAmt + 150;
+        rows.push([id, cls, subjectsList.join(", "), bookAmt, 150, total]);
+      }
 
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Olympiad_Book_Orders.csv";
-      a.click();
-      URL.revokeObjectURL(url);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Orders");
+      XLSX.writeFile(wb, "Olympiad_Book_Orders.xlsx");
     }
 
-    // Init on load
-    refresh();
+    // Init
+    updateStudentDisplay();
   </script>
 </body>
 </html>
