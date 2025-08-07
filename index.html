@@ -40,12 +40,37 @@
     .nav-buttons button {
       margin-right: 5px;
     }
+    select {
+      padding: 5px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
 
   <h2>📘 Olympiad Book Tracker</h2>
-  <div><b>Class:</b> <span id="classDisplay"></span> &nbsp;&nbsp; <b>Student ID:</b> <span id="studentDisplay"></span></div>
+  <div>
+    <b>Class:</b>
+    <select id="classSelector" onchange="changeClass(this.value)">
+      <option value="0">I</option>
+      <option value="1">II</option>
+      <option value="2">III</option>
+      <option value="3">IV</option>
+      <option value="4">V</option>
+      <option value="5">VI</option>
+      <option value="6">VII</option>
+      <option value="7">VIII</option>
+      <option value="8">IX</option>
+      <option value="9">X</option>
+    </select>
+
+    &nbsp;&nbsp;
+
+    <b>Student ID:</b>
+    <select id="studentSelector" onchange="changeStudent(this.value)">
+      <!-- Populated by JS -->
+    </select>
+  </div>
 
   <div class="button-grid" id="subjectButtons"></div>
 
@@ -78,6 +103,18 @@
       return `${classes[currentClassIndex]}_${currentStudentIndex + 1}`;
     }
 
+    function renderStudentSelector() {
+      const sel = document.getElementById("studentSelector");
+      sel.innerHTML = "";
+      for (let i = 1; i <= maxStudentsPerClass; i++) {
+        const opt = document.createElement("option");
+        opt.value = i - 1;
+        opt.textContent = i;
+        sel.appendChild(opt);
+      }
+      sel.value = currentStudentIndex;
+    }
+
     function renderButtons() {
       const container = document.getElementById('subjectButtons');
       container.innerHTML = "";
@@ -104,11 +141,6 @@
       renderButtons();
       renderSummary();
       renderTotals();
-    }
-
-    function renderStudentInfo() {
-      document.getElementById("classDisplay").textContent = classes[currentClassIndex];
-      document.getElementById("studentDisplay").textContent = currentStudentIndex + 1;
     }
 
     function renderSummary() {
@@ -193,8 +225,20 @@
       }
     }
 
+    function changeClass(index) {
+      currentClassIndex = parseInt(index);
+      refresh();
+    }
+
+    function changeStudent(index) {
+      currentStudentIndex = parseInt(index);
+      refresh();
+    }
+
     function refresh() {
-      renderStudentInfo();
+      document.getElementById("classSelector").value = currentClassIndex;
+      document.getElementById("studentSelector").value = currentStudentIndex;
+      renderStudentSelector();
       renderButtons();
       renderSummary();
       renderTotals();
