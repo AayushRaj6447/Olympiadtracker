@@ -2,193 +2,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Olympiad Book Tracker</title>
+  <title>Olympiad Exam & Book Tracker</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    button { margin: 5px; padding: 10px 15px; font-size: 16px; }
-    .selected { background-color: lightgreen; }
-    #summary, #classSubjectSummary { margin-top: 30px; white-space: pre; font-family: monospace; background: #f4f4f4; padding: 15px; border: 1px solid #ccc; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    button { margin: 4px; padding: 8px; cursor: pointer; }
+    .highlight { background-color: #90ee90; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 4px; }
+    .group { margin-top: 10px; }
+    #studentId { font-weight: bold; margin-left: 10px; }
   </style>
 </head>
 <body>
-  <h2>Olympiad Book Order Tracker</h2>
-
-  <label for="classSelect">Select Class:</label>
-  <select id="classSelect">
-    <option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option>
-    <option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option>
-  </select>
-  <br><br>
-
+  <h2>Olympiad Tracker</h2>
   <div>
-    <button onclick="prevStudent()">⏮ Previous</button>
-    <span id="studentIdDisplay">I_1</span>
-    <button onclick="nextStudent()">Next ⏭</button>
+    <label>Class:
+      <select id="classSelect">
+        <option value="1">Class 1</option>
+        <option value="2">Class 2</option>
+        <option value="3">Class 3</option>
+        <option value="4">Class 4</option>
+        <option value="5">Class 5</option>
+        <option value="6">Class 6</option>
+        <option value="7">Class 7</option>
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10">Class 10</option>
+      </select>
+    </label>
+    <button onclick="prevStudent()">Previous</button>
+    <button onclick="nextStudent()">Next</button>
+    <span id="studentId"></span>
   </div>
 
-  <h3>Select Subjects</h3>
-  <div id="subjects">
-    <button onclick="toggleSubject('GK')">GK</button>
-    <button onclick="toggleSubject('English')">English</button>
-    <button onclick="toggleSubject('Science')">Science</button>
-    <button onclick="toggleSubject('Maths')">Maths</button>
-    <button onclick="toggleSubject('Computer')">Computer</button>
-    <button onclick="toggleSubject('Social Studies')">Social Studies</button>
-    <button onclick="toggleSubject('Hindi')">Hindi</button>
-    <button onclick="toggleSubject('Reasoning')">Reasoning</button>
+  <div class="group">
+    <h3>Subjects</h3>
+    <div id="buttons"></div>
   </div>
 
-  <br>
-  <button onclick="clearStudent()">❌ Clear This Student</button>
-  <button onclick="resetAll()">🔁 Reset All</button>
-  <button onclick="downloadExcel()">📥 Download Excel</button>
+  <div class="group">
+    <button onclick="resetStudent()">Reset This Student</button>
+  </div>
 
+  <h3>Summary</h3>
   <div id="summary"></div>
-  <div id="classSubjectSummary"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
-    const subjects = ["GK", "English", "Science", "Maths", "Computer", "Social Studies", "Hindi", "Reasoning"];
-    let currentClass = "I";
-    let currentIndex = 1;
-    let data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
+    const subjects = ['GK','English','Science','Maths','Computer','Social Studies','Hindi','Reasoning'];
+    const prices = { book: 100, reasoning: 250, exam: 150 };
+    const maxStudents = 250;
 
-    const studentIdDisplay = document.getElementById("studentIdDisplay");
-    const classSelect = document.getElementById("classSelect");
-    const subjectButtons = document.querySelectorAll("#subjects button");
-    const summaryDiv = document.getElementById("summary");
-    const classSummaryDiv = document.getElementById("classSubjectSummary");
+    let currentClass = 1;
+    let currentStudent = 1;
+    let data = JSON.parse(localStorage.getItem("tracker") || "{}");
 
-    classSelect.addEventListener("change", () => {
-      currentClass = classSelect.value;
-      currentIndex = 1;
-      updateStudentDisplay();
-    });
+    const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
 
-    function updateStudentDisplay() {
-      const id = `${currentClass}_${currentIndex}`;
-      studentIdDisplay.textContent = id;
-      updateSubjectButtons();
-      updateSummary();
+    function studentKey() {
+      return roman[currentClass - 1] + '_' + currentStudent;
     }
 
-    function getCurrentID() {
-      return `${currentClass}_${currentIndex}`;
+    function updateDisplay() {
+      document.getElementById("studentId").innerText = "ID: " + studentKey();
+      renderButtons();
+      renderSummary();
     }
 
-    function toggleSubject(subject) {
-      const id = getCurrentID();
-      data[id] = data[id] || [];
-      if (data[id].includes(subject)) {
-        data[id] = data[id].filter(s => s !== subject);
-      } else {
-        data[id].push(subject);
-      }
-      localStorage.setItem("olympiadData", JSON.stringify(data));
-      updateSubjectButtons();
-      updateSummary();
-    }
+    function renderButtons() {
+      const container = document.getElementById("buttons");
+      const entry = data[studentKey()] || { exams: [], books: [] };
+      container.innerHTML = "";
+      subjects.forEach(sub => {
+        const examBtn = document.createElement("button");
+        examBtn.textContent = `✔ Exam: ${sub}`;
+        examBtn.className = entry.exams.includes(sub) ? "highlight" : "";
+        examBtn.onclick = () => toggle(sub, "exams");
 
-    function updateSubjectButtons() {
-      const id = getCurrentID();
-      const selected = data[id] || [];
-      subjectButtons.forEach(btn => {
-        if (selected.includes(btn.textContent)) {
-          btn.classList.add("selected");
-        } else {
-          btn.classList.remove("selected");
-        }
+        const bookBtn = document.createElement("button");
+        bookBtn.textContent = `📘 Book: ${sub}`;
+        bookBtn.className = entry.books.includes(sub) ? "highlight" : "";
+        bookBtn.onclick = () => toggle(sub, "books");
+
+        container.appendChild(examBtn);
+        container.appendChild(bookBtn);
       });
     }
 
+    function toggle(subject, type) {
+      const key = studentKey();
+      if (!data[key]) data[key] = { class: currentClass, exams: [], books: [] };
+      const arr = data[key][type];
+      const idx = arr.indexOf(subject);
+      if (idx >= 0) arr.splice(idx, 1);
+      else arr.push(subject);
+      saveData();
+      updateDisplay();
+    }
+
     function prevStudent() {
-      if (currentIndex > 1) {
-        currentIndex--;
-        updateStudentDisplay();
-      }
+      if (currentStudent > 1) currentStudent--;
+      updateDisplay();
     }
 
     function nextStudent() {
-      if (currentIndex < 150) {
-        currentIndex++;
-        updateStudentDisplay();
+      if (currentStudent < maxStudents) currentStudent++;
+      updateDisplay();
+    }
+
+    function resetStudent() {
+      delete data[studentKey()];
+      saveData();
+      updateDisplay();
+    }
+
+    function saveData() {
+      localStorage.setItem("tracker", JSON.stringify(data));
+    }
+
+    function renderSummary() {
+      const summary = {};
+      for (let cls = 1; cls <= 10; cls++) {
+        summary[cls] = { exam: {}, book: {}, totalExam: 0, totalBook: 0 };
+        subjects.forEach(s => { summary[cls].exam[s] = 0; summary[cls].book[s] = 0; });
       }
-    }
 
-    function clearStudent() {
-      const id = getCurrentID();
-      delete data[id];
-      localStorage.setItem("olympiadData", JSON.stringify(data));
-      updateSubjectButtons();
-      updateSummary();
-    }
-
-    function resetAll() {
-      if (confirm("Are you sure you want to delete all data?")) {
-        data = {};
-        localStorage.removeItem("olympiadData");
-        updateStudentDisplay();
-        updateSummary();
-      }
-    }
-
-    function updateSummary() {
-      let totalBooks = 0, totalReasoning = 0, totalForms = 0, totalAmount = 0;
-      const subjectCounts = {}, classWise = {};
-
-      for (let id in data) {
-        const cls = id.split("_")[0];
-        classWise[cls] = classWise[cls] || {};
-        totalForms++;
-        data[id].forEach(sub => {
-          const price = sub === "Reasoning" ? 250 : 100;
-          totalAmount += price;
-          totalBooks++;
-          if (sub === "Reasoning") totalReasoning++;
-          subjectCounts[sub] = (subjectCounts[sub] || 0) + 1;
-          classWise[cls][sub] = (classWise[cls][sub] || 0) + 1;
+      Object.entries(data).forEach(([id, entry]) => {
+        const cls = entry.class;
+        entry.exams.forEach(s => {
+          summary[cls].exam[s]++;
+          summary[cls].totalExam += prices.exam;
         });
-      }
+        entry.books.forEach(s => {
+          summary[cls].book[s]++;
+          summary[cls].totalBook += (s === "Reasoning" ? prices.reasoning : prices.book);
+        });
+      });
 
-      summaryDiv.innerHTML =
-        `📘 Total Books: ${totalBooks}\n` +
-        `🧠 Reasoning Books: ${totalReasoning}\n` +
-        `📄 Total Forms: ${totalForms}\n` +
-        `💰 Total Book Amount: ₹${totalAmount}\n` +
-        `🧾 Total Form Amount: ₹${totalForms * 150}\n` +
-        `💵 Grand Total: ₹${totalAmount + totalForms * 150}\n` +
-        `\n📊 Subject-wise Counts:\n` +
-        subjects.map(s => `${s.padEnd(15)}: ${subjectCounts[s] || 0}`).join("\n");
+      let html = '<table><tr><th>Class</th>';
+      subjects.forEach(s => html += `<th>${s} Exam</th><th>${s} Book</th>`);
+      html += '<th>Exam ₹</th><th>Book ₹</th><th>Total ₹</th></tr>';
 
-      classSummaryDiv.innerHTML = `📚 Class-wise Subject Distribution:\n\n`;
-
-      for (let cls in classWise) {
-        classSummaryDiv.innerHTML += `Class ${cls}:\n`;
+      for (let cls = 1; cls <= 10; cls++) {
+        html += `<tr><td>${cls}</td>`;
         subjects.forEach(s => {
-          classSummaryDiv.innerHTML += `  ${s.padEnd(15)}: ${classWise[cls][s] || 0}\n`;
+          html += `<td>${summary[cls].exam[s]}</td><td>${summary[cls].book[s]}</td>`;
         });
-        classSummaryDiv.innerHTML += "\n";
-      }
-    }
-
-    function downloadExcel() {
-      const rows = [["Student ID", "Class", "Subjects", "Books Amount", "Form Amount", "Total"]];
-      for (let id in data) {
-        const cls = id.split("_")[0];
-        const subjectsList = data[id];
-        const bookAmt = subjectsList.reduce((sum, sub) => sum + (sub === "Reasoning" ? 250 : 100), 0);
-        const total = bookAmt + 150;
-        rows.push([id, cls, subjectsList.join(", "), bookAmt, 150, total]);
+        const e = summary[cls].totalExam, b = summary[cls].totalBook;
+        html += `<td>${e}</td><td>${b}</td><td>${e + b}</td></tr>`;
       }
 
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Orders");
-      XLSX.writeFile(wb, "Olympiad_Book_Orders.xlsx");
+      html += '</table>';
+      document.getElementById("summary").innerHTML = html;
     }
 
-    // Init
-    updateStudentDisplay();
+    document.getElementById("classSelect").addEventListener("change", e => {
+      currentClass = parseInt(e.target.value);
+      currentStudent = 1;
+      updateDisplay();
+    });
+
+    updateDisplay();
   </script>
 </body>
 </html>
