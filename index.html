@@ -1,230 +1,226 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Olympiad Book Tracker</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; color: #333; }
-    h1, h2 { text-align: center; }
-    .controls, .summary, .navigation, .export, .manual-nav { text-align: center; margin: 20px 0; }
-    .subjects button, .navigation button, .manual-nav select { margin: 5px; padding: 10px 20px; font-size: 16px; }
-    .summary pre { text-align: left; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 5px; overflow-x: auto; max-height: 300px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 15px;
+      background-color: #f9f9f9;
+    }
+    h2 {
+      margin-bottom: 5px;
+    }
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+    #summary, #totals {
+      margin-top: 15px;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    .nav-buttons {
+      margin-top: 10px;
+    }
+    .nav-buttons button {
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Olympiad Book Tracker</h1>
 
-  <div class="manual-nav">
-    <label for="classSelect">Class:</label>
-    <select id="classSelect" onchange="resetStudentIndex(); updateCurrentStudent();">
-      <option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option>
-      <option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option>
-    </select>
+  <h2>📘 Olympiad Book Tracker</h2>
+  <div><b>Class:</b> <span id="classDisplay"></span> &nbsp;&nbsp; <b>Student ID:</b> <span id="studentDisplay"></span></div>
 
-    <label for="studentSelect">Student No:</label>
-    <select id="studentSelect" onchange="updateCurrentStudent();">
-    </select>
+  <div class="button-grid" id="subjectButtons"></div>
+
+  <div class="nav-buttons">
+    <button onclick="prevStudent()">⬅️ Prev</button>
+    <button onclick="nextStudent()">➡️ Next</button>
+    <button onclick="resetStudent()">🗑️ Reset This Student</button>
+    <button onclick="resetAll()">❌ Reset All</button>
+    <button onclick="downloadExcel()">📥 Export Excel</button>
   </div>
 
-  <div class="navigation">
-    <h2>Current Student: <span id="currentStudent">I_1</span></h2>
-    <button onclick="prevStudent()">⬅️ Previous</button>
-    <button onclick="nextStudent()">Next ➡️</button>
-  </div>
-
-  <div class="controls">
-    <div class="subjects">
-      <button onclick="addBook('GK')">GK</button>
-      <button onclick="addBook('English')">English</button>
-      <button onclick="addBook('Science')">Science</button>
-      <button onclick="addBook('Maths')">Maths</button>
-      <button onclick="addBook('Computer')">Computer</button>
-      <button onclick="addBook('Social')">Social</button>
-      <button onclick="addBook('Hindi')">Hindi</button>
-      <button onclick="addBook('Reasoning')">Reasoning</button>
-      <button onclick="addBook('None')">❌ No Books</button>
-    </div>
-    <div>
-      <button onclick="undoLast()">↩️ Undo</button>
-      <button onclick="resetStudent()">♻️ Reset Student</button>
-    </div>
-  </div>
-
-  <div class="summary">
-    <h2>📊 Live Summary</h2>
-    <pre id="summaryBox">No data yet.</pre>
-  </div>
-
-  <div class="export">
-    <button onclick="downloadExcel()">⬇️ Download Excel</button>
-  </div>
+  <div id="summary"></div>
+  <div id="totals"></div>
 
   <script>
-    const prices = { Reasoning: 250, None: 0 };
-    const allSubjects = ["GK", "English", "Science", "Maths", "Computer", "Social", "Hindi", "Reasoning"];
-    let currentClass = "I";
-    let currentIndex = 1;
-    const maxStudents = 50;
+    const classes = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+    const maxStudentsPerClass = 30;
+    const subjects = ["GK", "English", "Science", "Maths", "Computer", "Social Studies", "Hindi", "Reasoning"];
+    const subjectPrices = {
+      "GK": 100, "English": 100, "Science": 100, "Maths": 100,
+      "Computer": 100, "Social Studies": 100, "Hindi": 100, "Reasoning": 250
+    };
+    const formPrice = 150;
 
-    const data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
+    let currentClassIndex = 0;
+    let currentStudentIndex = 0;
+    let data = JSON.parse(localStorage.getItem('olympiadData')) || {};
 
-    function getStudentId() {
-      return currentClass + "_" + currentIndex;
+    function getStudentID() {
+      return `${classes[currentClassIndex]}_${currentStudentIndex + 1}`;
     }
 
-    function saveData() {
-      localStorage.setItem("olympiadData", JSON.stringify(data));
+    function renderButtons() {
+      const container = document.getElementById('subjectButtons');
+      container.innerHTML = "";
+      subjects.forEach(subject => {
+        const btn = document.createElement('button');
+        btn.textContent = subject;
+        btn.onclick = () => toggleSubject(subject);
+        if (data[getStudentID()]?.includes(subject)) {
+          btn.classList.add("active");
+        }
+        container.appendChild(btn);
+      });
     }
 
-    function updateCurrentStudent() {
-      currentClass = document.getElementById("classSelect").value;
-      currentIndex = parseInt(document.getElementById("studentSelect").value);
-      document.getElementById("currentStudent").innerText = getStudentId();
-      updateSummary();
-    }
-
-    function resetStudentIndex() {
-      document.getElementById("studentSelect").value = 1;
-      currentIndex = 1;
-    }
-
-    function addBook(subject) {
-      const id = getStudentId();
-      if (!data[id]) data[id] = [];
-      if (subject === "None") {
-        data[id] = [];
-      } else if (!data[id].includes(subject)) {
+    function toggleSubject(subject) {
+      const id = getStudentID();
+      data[id] = data[id] || [];
+      if (data[id].includes(subject)) {
+        data[id] = data[id].filter(s => s !== subject);
+      } else {
         data[id].push(subject);
       }
-      saveData();
-      updateSummary();
+      localStorage.setItem('olympiadData', JSON.stringify(data));
+      renderButtons();
+      renderSummary();
+      renderTotals();
     }
 
-    function undoLast() {
-      const id = getStudentId();
-      if (data[id] && data[id].length > 0) {
-        data[id].pop();
-        saveData();
-        updateSummary();
-      }
+    function renderStudentInfo() {
+      document.getElementById("classDisplay").textContent = classes[currentClassIndex];
+      document.getElementById("studentDisplay").textContent = currentStudentIndex + 1;
     }
 
-    function resetStudent() {
-      const id = getStudentId();
-      delete data[id];
-      saveData();
-      updateSummary();
+    function renderSummary() {
+      const id = getStudentID();
+      const books = data[id] || [];
+      let bookTotal = books.reduce((sum, sub) => sum + subjectPrices[sub], 0);
+      const fullTotal = bookTotal + formPrice;
+
+      document.getElementById("summary").innerHTML = `
+        <b>Selected Subjects:</b> ${books.join(", ") || "None"}<br>
+        <b>Book Price:</b> ₹${bookTotal} | <b>Form Price:</b> ₹${formPrice}<br>
+        <b>Total for ${id}:</b> ₹${fullTotal}
+      `;
     }
 
-    function prevStudent() {
-      if (currentIndex > 1) {
-        currentIndex--;
-        document.getElementById("studentSelect").value = currentIndex;
-        updateCurrentStudent();
-      }
-    }
+    function renderTotals() {
+      let totalBooks = 0, totalReasoning = 0, totalForms = 0, grandTotal = 0;
+      let classBookCount = {}, subjectCount = {};
+      classes.forEach(cls => classBookCount[cls] = 0);
+      subjects.forEach(sub => subjectCount[sub] = 0);
 
-    function nextStudent() {
-      if (currentIndex < maxStudents) {
-        currentIndex++;
-        document.getElementById("studentSelect").value = currentIndex;
-        updateCurrentStudent();
-      }
-    }
-
-    function updateSummary() {
-      let text = "";
-      let totals = { form: 0, books: 0, total: 0 };
-      let subjectCounts = {};
-      let classTotals = {};
-
-      for (let cls of ["I","II","III","IV","V","VI","VII","VIII","IX","X"]) {
-        classTotals[cls] = { count: 0, books: 0, total: 0 };
-      }
-
-      Object.entries(data).forEach(([id, books]) => {
-        const cls = id.split("_")[0];
-        const studentTotal = books.reduce((sum, book) => sum + (prices[book] || 100), 0);
-        text += `${id}: ${books.join(", ") || "No books"} | ₹${studentTotal + 150} (Books ₹${studentTotal} + Form ₹150)
-`;
-        classTotals[cls].count++;
-        classTotals[cls].books += studentTotal;
-        classTotals[cls].total += studentTotal + 150;
-        books.forEach(book => {
-          subjectCounts[book] = (subjectCounts[book] || 0) + 1;
+      Object.keys(data).forEach(id => {
+        const [cls, num] = id.split("_");
+        const subs = data[id];
+        if (!subs || subs.length === 0) return;
+        classBookCount[cls] += subs.length;
+        totalForms++;
+        subs.forEach(sub => {
+          subjectCount[sub]++;
+          grandTotal += subjectPrices[sub];
         });
       });
 
-      text += "
-📚 Subject-wise Totals:
-";
-      for (let sub of allSubjects) {
-        const count = subjectCounts[sub] || 0;
-        const price = prices[sub] || 100;
-        text += `${sub}: ${count} × ₹${price} = ₹${count * price}
-`;
-        totals.books += count * price;
+      grandTotal += totalForms * formPrice;
+
+      let report = `<b>📊 Overall Totals:</b><br>`;
+      report += `<b>Total Forms:</b> ${totalForms} (₹${totalForms * formPrice})<br>`;
+      report += `<b>Total Books:</b> ${Object.values(subjectCount).reduce((a,b)=>a+b,0)} (₹${grandTotal - totalForms * formPrice})<br>`;
+      report += `<b>Grand Total:</b> ₹${grandTotal}<br><br>`;
+
+      report += `<b>Subjects Ordered:</b><br>`;
+      subjects.forEach(s => report += `${s}: ${subjectCount[s]}<br>`);
+
+      report += `<br><b>Class-wise Book Count:</b><br>`;
+      classes.forEach(c => report += `${c}: ${classBookCount[c]}<br>`);
+
+      document.getElementById("totals").innerHTML = report;
+    }
+
+    function nextStudent() {
+      if (currentStudentIndex < maxStudentsPerClass - 1) {
+        currentStudentIndex++;
+      } else if (currentClassIndex < classes.length - 1) {
+        currentClassIndex++;
+        currentStudentIndex = 0;
       }
+      refresh();
+    }
 
-      text += "
-🏫 Class-wise Totals:
-";
-      for (let [cls, val] of Object.entries(classTotals)) {
-        if (val.count > 0) {
-          text += `${cls}: ${val.count} forms | Books ₹${val.books} | Total ₹${val.total}
-`;
-        }
+    function prevStudent() {
+      if (currentStudentIndex > 0) {
+        currentStudentIndex--;
+      } else if (currentClassIndex > 0) {
+        currentClassIndex--;
+        currentStudentIndex = maxStudentsPerClass - 1;
       }
+      refresh();
+    }
 
-      totals.form = Object.keys(data).length * 150;
-      totals.total = totals.books + totals.form;
+    function resetStudent() {
+      const id = getStudentID();
+      delete data[id];
+      localStorage.setItem('olympiadData', JSON.stringify(data));
+      refresh();
+    }
 
-      text += `
-💰 Grand Total:
-Books: ₹${totals.books}
-Forms: ₹${totals.form}
-Total: ₹${totals.total}`;
+    function resetAll() {
+      if (confirm("Are you sure you want to delete ALL data?")) {
+        localStorage.removeItem('olympiadData');
+        data = {};
+        refresh();
+      }
+    }
 
-      document.getElementById("summaryBox").innerText = text || "No data yet.";
+    function refresh() {
+      renderStudentInfo();
+      renderButtons();
+      renderSummary();
+      renderTotals();
     }
 
     function downloadExcel() {
-      let csv = "Class,Student ID,Book,Price\n";
-      Object.entries(data).forEach(([id, books]) => {
+      let csv = "Student ID,Class,Subjects,Books Cost,Form Cost,Total\n";
+      Object.keys(data).forEach(id => {
+        const subs = data[id] || [];
         const cls = id.split("_")[0];
-        if (books.length === 0) {
-          csv += `${cls},${id},No books,₹0\n`;
-        } else {
-          books.forEach(book => {
-            const price = prices[book] || 100;
-            csv += `${cls},${id},${book},₹${price}\n`;
-          });
-        }
-        csv += `${cls},${id},Form,₹150\n`;
+        const bookTotal = subs.reduce((sum, s) => sum + subjectPrices[s], 0);
+        const total = bookTotal + formPrice;
+        csv += `${id},${cls},"${subs.join(", ")}",${bookTotal},${formPrice},${total}\n`;
       });
 
-      const blob = new Blob([csv], { type: "text/csv" });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Olympiad_Book_Report.csv";
-      document.body.appendChild(a);
+      a.download = "Olympiad_Book_Orders.csv";
       a.click();
-      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
-    window.onload = function () {
-      let select = document.getElementById("studentSelect");
-      for (let i = 1; i <= maxStudents; i++) {
-        let opt = document.createElement("option");
-        opt.value = i;
-        opt.text = i;
-        select.appendChild(opt);
-      }
-      updateCurrentStudent();
-    };
+    // Init on load
+    refresh();
   </script>
 </body>
 </html>
