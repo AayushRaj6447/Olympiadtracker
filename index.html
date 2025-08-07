@@ -1,166 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Olympiad Exam & Book Tracker</title>
+  <meta charset="UTF-8">
+  <title>Olympiad Tracker</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    button { margin: 4px; padding: 8px; cursor: pointer; }
-    .highlight { background-color: #90ee90; }
-    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 4px; }
-    .group { margin-top: 10px; }
-    #studentId { font-weight: bold; margin-left: 10px; }
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    select, button {
+      margin: 5px;
+      padding: 5px 10px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .subject-btn {
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+    }
+    .selected {
+      background-color: #4caf50;
+      color: white;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .summary {
+      white-space: pre-wrap;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
-  <h2>Olympiad Tracker</h2>
-  <div>
-    <label>Class:
-      <select id="classSelect">
-        <option value="1">Class 1</option>
-        <option value="2">Class 2</option>
-        <option value="3">Class 3</option>
-        <option value="4">Class 4</option>
-        <option value="5">Class 5</option>
-        <option value="6">Class 6</option>
-        <option value="7">Class 7</option>
-        <option value="8">Class 8</option>
-        <option value="9">Class 9</option>
-        <option value="10">Class 10</option>
-      </select>
-    </label>
-    <button onclick="prevStudent()">Previous</button>
-    <button onclick="nextStudent()">Next</button>
-    <span id="studentId"></span>
+
+  <h1>Olympiad Tracker</h1>
+
+  <div class="section">
+    <label for="classSelector">Select Class:</label>
+    <select id="classSelector">
+      <option value="I">Class I</option>
+      <option value="II">Class II</option>
+      <option value="III">Class III</option>
+      <option value="IV">Class IV</option>
+      <option value="V">Class V</option>
+      <option value="VI">Class VI</option>
+      <option value="VII">Class VII</option>
+      <option value="VIII">Class VIII</option>
+      <option value="IX">Class IX</option>
+      <option value="X">Class X</option>
+    </select>
+
+    <button onclick="prevStudent()">← Previous</button>
+    <button onclick="nextStudent()">Next →</button>
+    <span id="studentIdDisplay"></span>
   </div>
 
-  <div class="group">
-    <h3>Subjects</h3>
-    <div id="buttons"></div>
+  <div class="section">
+    <h3>Exam Selection (₹150/subject)</h3>
+    <div id="examButtons" class="grid"></div>
+
+    <h3>Book Selection (₹100/book, Reasoning ₹250)</h3>
+    <div id="bookButtons" class="grid"></div>
   </div>
 
-  <div class="group">
-    <button onclick="resetStudent()">Reset This Student</button>
+  <div class="section">
+    <button onclick="downloadExcel()">📤 Export to Excel</button>
+    <button onclick="resetStudent()">Clear Current Student</button>
   </div>
 
-  <h3>Summary</h3>
-  <div id="summary"></div>
+  <div class="section">
+    <h3>Live Summary</h3>
+    <div id="summary" class="summary">No data yet.</div>
+  </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
-    const subjects = ['GK','English','Science','Maths','Computer','Social Studies','Hindi','Reasoning'];
-    const prices = { book: 100, reasoning: 250, exam: 150 };
+    const subjects = ["GK", "English", "Science", "Maths", "Computer", "Social", "Hindi", "Reasoning"];
+    const classSelector = document.getElementById("classSelector");
+    let currentClass = classSelector.value;
+    let currentIndex = 1;
     const maxStudents = 250;
 
-    let currentClass = 1;
-    let currentStudent = 1;
-    let data = JSON.parse(localStorage.getItem("tracker") || "{}");
+    const data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
 
-    const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+    classSelector.addEventListener("change", () => {
+      currentClass = classSelector.value;
+      currentIndex = 1;
+      render();
+    });
 
-    function studentKey() {
-      return roman[currentClass - 1] + '_' + currentStudent;
+    function getId() {
+      return `${currentClass}_${currentIndex}`;
     }
 
-    function updateDisplay() {
-      document.getElementById("studentId").innerText = "ID: " + studentKey();
-      renderButtons();
-      renderSummary();
+    function ensureData() {
+      if (!data[currentClass]) data[currentClass] = {};
+      if (!data[currentClass][getId()]) data[currentClass][getId()] = { exams: [], books: [] };
     }
 
-    function renderButtons() {
-      const container = document.getElementById("buttons");
-      const entry = data[studentKey()] || { exams: [], books: [] };
-      container.innerHTML = "";
-      subjects.forEach(sub => {
+    function render() {
+      document.getElementById("studentIdDisplay").textContent = `Student: ${getId()}`;
+      ensureData();
+
+      const examDiv = document.getElementById("examButtons");
+      const bookDiv = document.getElementById("bookButtons");
+      examDiv.innerHTML = "";
+      bookDiv.innerHTML = "";
+
+      subjects.forEach((subj, idx) => {
         const examBtn = document.createElement("button");
-        examBtn.textContent = `✔ Exam: ${sub}`;
-        examBtn.className = entry.exams.includes(sub) ? "highlight" : "";
-        examBtn.onclick = () => toggle(sub, "exams");
+        examBtn.textContent = subj;
+        examBtn.className = "subject-btn";
+        if (data[currentClass][getId()].exams.includes(subj)) examBtn.classList.add("selected");
+        examBtn.onclick = () => toggleSubject("exams", subj);
+        examDiv.appendChild(examBtn);
 
         const bookBtn = document.createElement("button");
-        bookBtn.textContent = `📘 Book: ${sub}`;
-        bookBtn.className = entry.books.includes(sub) ? "highlight" : "";
-        bookBtn.onclick = () => toggle(sub, "books");
-
-        container.appendChild(examBtn);
-        container.appendChild(bookBtn);
+        bookBtn.textContent = subj;
+        bookBtn.className = "subject-btn";
+        if (data[currentClass][getId()].books.includes(subj)) bookBtn.classList.add("selected");
+        bookBtn.onclick = () => toggleSubject("books", subj);
+        bookDiv.appendChild(bookBtn);
       });
+
+      updateSummary();
     }
 
-    function toggle(subject, type) {
-      const key = studentKey();
-      if (!data[key]) data[key] = { class: currentClass, exams: [], books: [] };
-      const arr = data[key][type];
-      const idx = arr.indexOf(subject);
-      if (idx >= 0) arr.splice(idx, 1);
-      else arr.push(subject);
-      saveData();
-      updateDisplay();
+    function toggleSubject(type, subj) {
+      ensureData();
+      const list = data[currentClass][getId()][type];
+      const i = list.indexOf(subj);
+      if (i === -1) list.push(subj);
+      else list.splice(i, 1);
+      save();
+      render();
     }
 
     function prevStudent() {
-      if (currentStudent > 1) currentStudent--;
-      updateDisplay();
+      if (currentIndex > 1) {
+        currentIndex--;
+        render();
+      }
     }
 
     function nextStudent() {
-      if (currentStudent < maxStudents) currentStudent++;
-      updateDisplay();
+      if (currentIndex < maxStudents) {
+        currentIndex++;
+        render();
+      }
     }
 
     function resetStudent() {
-      delete data[studentKey()];
-      saveData();
-      updateDisplay();
-    }
-
-    function saveData() {
-      localStorage.setItem("tracker", JSON.stringify(data));
-    }
-
-    function renderSummary() {
-      const summary = {};
-      for (let cls = 1; cls <= 10; cls++) {
-        summary[cls] = { exam: {}, book: {}, totalExam: 0, totalBook: 0 };
-        subjects.forEach(s => { summary[cls].exam[s] = 0; summary[cls].book[s] = 0; });
+      if (confirm("Clear selections for current student?")) {
+        delete data[currentClass][getId()];
+        save();
+        render();
       }
+    }
 
-      Object.entries(data).forEach(([id, entry]) => {
-        const cls = entry.class;
-        entry.exams.forEach(s => {
-          summary[cls].exam[s]++;
-          summary[cls].totalExam += prices.exam;
-        });
-        entry.books.forEach(s => {
-          summary[cls].book[s]++;
-          summary[cls].totalBook += (s === "Reasoning" ? prices.reasoning : prices.book);
-        });
-      });
+    function save() {
+      localStorage.setItem("olympiadData", JSON.stringify(data));
+    }
 
-      let html = '<table><tr><th>Class</th>';
-      subjects.forEach(s => html += `<th>${s} Exam</th><th>${s} Book</th>`);
-      html += '<th>Exam ₹</th><th>Book ₹</th><th>Total ₹</th></tr>';
+    function updateSummary() {
+      let summary = "";
+      let grandTotal = 0;
+      for (const cls in data) {
+        summary += `Class ${cls}:\n`;
+        const subjectCounts = {};
+        let examTotal = 0, bookTotal = 0, students = Object.keys(data[cls]).length;
 
-      for (let cls = 1; cls <= 10; cls++) {
-        html += `<tr><td>${cls}</td>`;
+        subjects.forEach(s => subjectCounts[s] = { exam: 0, book: 0 });
+
+        for (const student in data[cls]) {
+          const record = data[cls][student];
+          record.exams.forEach(s => subjectCounts[s].exam++);
+          record.books.forEach(s => subjectCounts[s].book++);
+
+          examTotal += record.exams.length * 150;
+          record.books.forEach(b => bookTotal += (b === "Reasoning" ? 250 : 100));
+        }
+
         subjects.forEach(s => {
-          html += `<td>${summary[cls].exam[s]}</td><td>${summary[cls].book[s]}</td>`;
+          const e = subjectCounts[s].exam;
+          const b = subjectCounts[s].book;
+          if (e || b) summary += `  ${s} → Exams: ${e}, Books: ${b}\n`;
         });
-        const e = summary[cls].totalExam, b = summary[cls].totalBook;
-        html += `<td>${e}</td><td>${b}</td><td>${e + b}</td></tr>`;
-      }
 
-      html += '</table>';
-      document.getElementById("summary").innerHTML = html;
+        const total = examTotal + bookTotal;
+        grandTotal += total;
+        summary += `  Students: ${students}, Exam ₹${examTotal}, Book ₹${bookTotal}, Total ₹${total}\n\n`;
+      }
+      summary += `Grand Total: ₹${grandTotal}`;
+      document.getElementById("summary").textContent = summary || "No data yet.";
     }
 
-    document.getElementById("classSelect").addEventListener("change", e => {
-      currentClass = parseInt(e.target.value);
-      currentStudent = 1;
-      updateDisplay();
+    function downloadExcel() {
+      const rows = [["Class", "Student ID", "Exam Subjects", "Book Subjects", "Exam ₹", "Book ₹", "Total ₹"]];
+      for (const cls in data) {
+        for (const student in data[cls]) {
+          const record = data[cls][student];
+          const examCost = record.exams.length * 150;
+          const bookCost = record.books.reduce((acc, b) => acc + (b === "Reasoning" ? 250 : 100), 0);
+          const total = examCost + bookCost;
+          rows.push([cls, student, record.exams.join(", "), record.books.join(", "), examCost, bookCost, total]);
+        }
+      }
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, "OlympiadData");
+      XLSX.writeFile(wb, "olympiad_data.xlsx");
+    }
+
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toUpperCase();
+      const examKeys = "12345678";
+      const bookKeys = "QWERTYUIO";
+
+      if (examKeys.includes(key)) {
+        const idx = examKeys.indexOf(key);
+        toggleSubject("exams", subjects[idx]);
+      }
+
+      if (bookKeys.includes(key)) {
+        const idx = bookKeys.indexOf(key);
+        toggleSubject("books", subjects[idx]);
+      }
+
+      if (key === "ARROWRIGHT") nextStudent();
+      if (key === "ARROWLEFT") prevStudent();
     });
 
-    updateDisplay();
+    render();
   </script>
+
 </body>
 </html>
