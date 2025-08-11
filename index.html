@@ -2,221 +2,220 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Olympiad Tracking</title>
+<title>Olympiad Tracker</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .container { display: flex; gap: 20px; }
-    .left, .right { flex: 1; }
-    .buttons { margin: 10px 0; }
-    button { padding: 6px 12px; margin: 3px; }
-    .subject, .book, .section { display: inline-block; padding: 6px 10px; margin: 2px; border: 1px solid #888; cursor: pointer; }
-    .selected { background-color: #4CAF50; color: white; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
-    h3 { margin-top: 20px; }
+body { font-family: Arial, sans-serif; margin: 20px; }
+button { margin: 5px; padding: 5px 10px; }
+.active { background-color: #4CAF50; color: white; }
+.container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; }
+h2 { margin-top: 0; }
+input[type="number"] { width: 80px; padding: 5px; }
+.summary { margin-top: 20px; }
+table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
 </style>
 </head>
 <body>
 
 <h2>Olympiad Tracking System</h2>
 
+<label>Select Class:</label>
+<select id="classSelect">
+  <option value="1">Class 1</option>
+  <option value="2">Class 2</option>
+  <option value="3">Class 3</option>
+  <option value="4">Class 4</option>
+  <option value="5">Class 5</option>
+  <option value="6">Class 6</option>
+  <option value="7">Class 7</option>
+  <option value="8">Class 8</option>
+  <option value="9">Class 9</option>
+  <option value="10">Class 10</option>
+</select>
+
 <div>
-    <label>Class: 
-        <select id="classSelect">
-            <option value="">Select</option>
-            <script>
-                for(let i=1;i<=10;i++){document.write(`<option value="${i}">${i}</option>`);}
-            </script>
-        </select>
-    </label>
-    <label>Roll No: <input type="number" id="rollNumber" min="1" max="250"></label>
+  <label>Section:</label>
+  <div class="container" id="sectionButtons">
+    <button data-section="A">A</button>
+    <button data-section="B">B</button>
+    <button data-section="C">C</button>
+    <button data-section="D">D</button>
+    <button data-section="E">E</button>
+  </div>
 </div>
 
 <div>
-    <h3>Section</h3>
-    <div id="sectionList"></div>
+  <label>Roll No:</label>
+  <input type="number" id="rollNumber" placeholder="Roll No">
+</div>
+
+<h3>Exams (₹150 each):</h3>
+<div class="container" id="examButtons">
+  <button data-exam="GK">GK (1)</button>
+  <button data-exam="English">English (2)</button>
+  <button data-exam="Science">Science (3)</button>
+  <button data-exam="Maths">Maths (4)</button>
+  <button data-exam="Computer">Computer (5)</button>
+  <button data-exam="Social">Social Studies (6)</button>
+  <button data-exam="Hindi">Hindi (7)</button>
+  <button data-exam="Reasoning">Reasoning (8)</button>
+</div>
+
+<h3>Books:</h3>
+<div class="container" id="bookButtons">
+  <button data-book="GK">GK (Q)</button>
+  <button data-book="English">English (W)</button>
+  <button data-book="Science">Science (E)</button>
+  <button data-book="Maths">Maths (R)</button>
+  <button data-book="Computer">Computer (T)</button>
+  <button data-book="Social">Social Studies (Y)</button>
+  <button data-book="Hindi">Hindi (U)</button>
+  <button data-book="Reasoning">Reasoning (O)</button>
 </div>
 
 <div>
-    <h3>Exams (₹150 each)</h3>
-    <div id="examList"></div>
+  <button id="prevBtn">← Previous</button>
+  <button id="nextBtn">Next →</button>
+  <button id="exportBtn">Export to Excel</button>
 </div>
 
-<div>
-    <h3>Books</h3>
-    <div id="bookList"></div>
-</div>
-
-<div class="buttons">
-    <button onclick="prevStudent()">Previous</button>
-    <button onclick="nextStudent()">Next</button>
-</div>
-
-<div>
-    <button onclick="saveData()">Save</button>
-</div>
-
-<div>
-    <h3>Live Summary</h3>
-    <div id="summary"></div>
+<div class="summary">
+  <h3>Live Summary</h3>
+  <div id="summary"></div>
 </div>
 
 <script>
-const exams = ["GK","English","Science","Maths","Computer","Social Studies","Hindi","Reasoning"];
-const books = ["GK","English","Science","Maths","Computer","Social Studies","Hindi","Reasoning"];
-const sections = ["A","B","C","D","E"];
-let data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
+let maxStudents = 250;
+let subjects = ["GK","English","Science","Maths","Computer","Social","Hindi","Reasoning"];
+let data = JSON.parse(localStorage.getItem("olympiadData")) || {};
+let currentClass = "1";
 let currentStudent = 1;
+let currentSection = "";
 
-function init() {
-    const examList = document.getElementById("examList");
-    const bookList = document.getElementById("bookList");
-    const sectionList = document.getElementById("sectionList");
+document.getElementById("classSelect").addEventListener("change", e => {
+  currentClass = e.target.value;
+  currentStudent = 1;
+  loadStudent();
+});
 
-    exams.forEach((subj, i) => {
-        let div = document.createElement("div");
-        div.className = "subject";
-        div.textContent = `${i+1}. ${subj}`;
-        div.onclick = () => toggleSelection(div, "exam", i);
-        examList.appendChild(div);
+document.querySelectorAll("#sectionButtons button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#sectionButtons button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSection = btn.dataset.section;
+    saveStudent();
+  });
+});
+
+document.querySelectorAll("#examButtons button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    btn.classList.toggle("active");
+    saveStudent();
+  });
+});
+
+document.querySelectorAll("#bookButtons button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    btn.classList.toggle("active");
+    saveStudent();
+  });
+});
+
+document.getElementById("rollNumber").addEventListener("input", saveStudent);
+
+document.getElementById("prevBtn").addEventListener("click", ()=>{
+  if(currentStudent>1){ currentStudent--; loadStudent(); }
+});
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+  if(currentStudent<maxStudents){ currentStudent++; loadStudent(); }
+});
+
+function saveStudent(){
+  if(!data[currentClass]) data[currentClass] = {};
+  data[currentClass][currentStudent] = {
+    section: currentSection,
+    roll: document.getElementById("rollNumber").value,
+    exams: Array.from(document.querySelectorAll("#examButtons .active")).map(b=>b.dataset.exam),
+    books: Array.from(document.querySelectorAll("#bookButtons .active")).map(b=>b.dataset.book)
+  };
+  localStorage.setItem("olympiadData", JSON.stringify(data));
+  updateSummary();
+}
+
+function loadStudent(){
+  document.querySelectorAll("#examButtons button, #bookButtons button, #sectionButtons button")
+    .forEach(b=>b.classList.remove("active"));
+  document.getElementById("rollNumber").value = "";
+  currentSection = "";
+  let student = data[currentClass]?.[currentStudent];
+  if(student){
+    document.getElementById("rollNumber").value = student.roll || "";
+    if(student.section){
+      currentSection = student.section;
+      document.querySelector(`#sectionButtons button[data-section='${student.section}']`)?.classList.add("active");
+    }
+    student.exams?.forEach(ex=>{
+      document.querySelector(`#examButtons button[data-exam='${ex}']`)?.classList.add("active");
     });
-
-    books.forEach((subj, i) => {
-        let div = document.createElement("div");
-        div.className = "book";
-        div.textContent = `${String.fromCharCode(81+i)}. ${subj}`;
-        div.onclick = () => toggleSelection(div, "book", i);
-        bookList.appendChild(div);
+    student.books?.forEach(book=>{
+      document.querySelector(`#bookButtons button[data-book='${book}']`)?.classList.add("active");
     });
-
-    sections.forEach((sec, i) => {
-        let div = document.createElement("div");
-        div.className = "section";
-        div.textContent = sec;
-        div.onclick = () => selectSection(div, sec);
-        sectionList.appendChild(div);
-    });
-
-    document.addEventListener("keydown", handleKey);
-    updateUI();
-    updateSummary();
+  }
+  updateSummary();
 }
 
-function toggleSelection(el, type, index) {
-    el.classList.toggle("selected");
-    saveSelection(type, index, el.classList.contains("selected"));
-}
-
-function selectSection(el, sec) {
-    document.querySelectorAll(".section").forEach(e => e.classList.remove("selected"));
-    el.classList.add("selected");
-    saveSection(sec);
-}
-
-function handleKey(e) {
-    let num = parseInt(e.key);
-    if(num >= 1 && num <= 8) {
-        document.querySelectorAll(".subject")[num-1].click();
+function updateSummary(){
+  let summaryHTML = "";
+  for(let cls in data){
+    let totalForms = 0, totalRevenue = 0;
+    for(let s in data[cls]){
+      let exams = data[cls][s].exams?.length || 0;
+      totalForms += exams;
+      totalRevenue += exams * 150;
     }
-    let char = e.key.toUpperCase().charCodeAt(0);
-    if(char >= 81 && char <= 79+8) {
-        document.querySelectorAll(".book")[char-81].click();
+    summaryHTML += `<p>Class ${cls}: ${totalForms} exams, ₹${totalRevenue}</p>`;
+  }
+  document.getElementById("summary").innerHTML = summaryHTML;
+}
+
+document.addEventListener("keydown", e=>{
+  let key = e.key.toUpperCase();
+  if(!isNaN(parseInt(key)) && key >= "1" && key <= "8"){
+    document.querySelector(`#examButtons button:nth-child(${key})`)?.click();
+  }
+  let bookKeys = {Q:0,W:1,E:2,R:3,T:4,Y:5,U:6,O:7};
+  if(bookKeys[key] !== undefined){
+    document.querySelector(`#bookButtons button:nth-child(${bookKeys[key]+1})`)?.click();
+  }
+  let sectionKeys = {Z:"A",X:"B",C:"C",V:"D",B:"E"};
+  if(sectionKeys[key]){
+    document.querySelector(`#sectionButtons button[data-section='${sectionKeys[key]}']`)?.click();
+  }
+  if(e.key === "ArrowRight") document.getElementById("nextBtn").click();
+  if(e.key === "ArrowLeft") document.getElementById("prevBtn").click();
+  if(!isNaN(parseInt(key)) && e.target.tagName !== "INPUT" && !(key >= "1" && key <= "8")){
+    document.getElementById("rollNumber").value += key;
+    saveStudent();
+  }
+});
+
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  let rows = [["Class","Student No","Section","Roll","Exams","Books","Total Cost"]];
+  for(let cls in data){
+    for(let s in data[cls]){
+      let st = data[cls][s];
+      let cost = (st.exams?.length || 0) * 150;
+      rows.push([cls, s, st.section || "", st.roll || "", (st.exams||[]).join(", "), (st.books||[]).join(", "), cost]);
     }
-    if(e.key === "ArrowRight") nextStudent();
-    if(e.key === "ArrowLeft") prevStudent();
-}
-
-function saveSelection(type, index, selected) {
-    let cls = document.getElementById("classSelect").value;
-    if(!cls) return;
-    let roll = document.getElementById("rollNumber").value;
-    if(!roll) return;
-    if(!data[cls]) data[cls] = {};
-    if(!data[cls][roll]) data[cls][roll] = {exams:[], books:[], section:null};
-
-    if(type === "exam") {
-        if(selected) data[cls][roll].exams.push(index);
-        else data[cls][roll].exams = data[cls][roll].exams.filter(i => i !== index);
-    } else if(type === "book") {
-        if(selected) data[cls][roll].books.push(index);
-        else data[cls][roll].books = data[cls][roll].books.filter(i => i !== index);
-    }
-    localStorage.setItem("olympiadData", JSON.stringify(data));
-    updateSummary();
-}
-
-function saveSection(sec) {
-    let cls = document.getElementById("classSelect").value;
-    let roll = document.getElementById("rollNumber").value;
-    if(!cls || !roll) return;
-    if(!data[cls]) data[cls] = {};
-    if(!data[cls][roll]) data[cls][roll] = {exams:[], books:[], section:null};
-    data[cls][roll].section = sec;
-    localStorage.setItem("olympiadData", JSON.stringify(data));
-}
-
-function saveData() {
-    localStorage.setItem("olympiadData", JSON.stringify(data));
-    alert("Data saved!");
-}
-
-function updateUI() {
-    document.querySelectorAll(".subject, .book, .section").forEach(el => el.classList.remove("selected"));
-    let cls = document.getElementById("classSelect").value;
-    let roll = document.getElementById("rollNumber").value;
-    if(cls && roll && data[cls] && data[cls][roll]) {
-        data[cls][roll].exams.forEach(i => document.querySelectorAll(".subject")[i].classList.add("selected"));
-        data[cls][roll].books.forEach(i => document.querySelectorAll(".book")[i].classList.add("selected"));
-        if(data[cls][roll].section) {
-            document.querySelectorAll(".section").forEach(secEl => {
-                if(secEl.textContent === data[cls][roll].section) secEl.classList.add("selected");
-            });
-        }
-    }
-}
-
-function nextStudent() {
-    let roll = parseInt(document.getElementById("rollNumber").value) || 1;
-    if(roll < 250) {
-        document.getElementById("rollNumber").value = roll + 1;
-        updateUI();
-    }
-}
-
-function prevStudent() {
-    let roll = parseInt(document.getElementById("rollNumber").value) || 1;
-    if(roll > 1) {
-        document.getElementById("rollNumber").value = roll - 1;
-        updateUI();
-    }
-}
-
-function updateSummary() {
-    let summaryHTML = "<table><tr><th>Class</th><th>Section</th><th>Subject</th><th>Count</th><th>Total Fee</th></tr>";
-    for(let cls in data) {
-        let subjectCount = {};
-        let totalFee = 0;
-        for(let roll in data[cls]) {
-            let student = data[cls][roll];
-            totalFee += student.exams.length * 150;
-            student.exams.forEach(i => {
-                let subj = exams[i];
-                if(!subjectCount[subj]) subjectCount[subj] = 0;
-                subjectCount[subj]++;
-            });
-        }
-        for(let subj in subjectCount) {
-            summaryHTML += `<tr><td>${cls}</td><td>-</td><td>${subj}</td><td>${subjectCount[subj]}</td><td>${totalFee}</td></tr>`;
-        }
-    }
-    summaryHTML += "</table>";
-    document.getElementById("summary").innerHTML = summaryHTML;
-}
-
-document.getElementById("classSelect").addEventListener("change", updateUI);
-document.getElementById("rollNumber").addEventListener("input", updateUI);
-init();
+  }
+  let csv = rows.map(r=>r.join(",")).join("\n");
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "olympiad_data.csv";
+  a.click();
+});
+loadStudent();
 </script>
-
 </body>
 </html>
