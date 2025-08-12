@@ -1,28 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Olympiad Tracker — Exams & Books</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: Arial, sans-serif; padding: 18px; background:#f6f7fb; color:#111 }
-    .card { max-width:1100px; margin:auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.06) }
-    h1 { margin:0 0 12px 0; font-size:20px }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px }
-    label { font-weight:600; margin-right:6px }
-    select, input[type="number"] { padding:6px; font-size:14px }
-    .grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
-    .btn { padding:8px 10px; border:1px solid #cfcfcf; border-radius:6px; background:#fff; cursor:pointer; user-select:none; min-width:90px; text-align:center }
-    .btn.active { background:#2e8b57; color:white; border-color:#2e8b57 }
-    .section-btn.active { background:#1565c0; color:white; border-color:#1565c0 }
-    .controls { margin-top:12px }
-    .summary { margin-top:18px; white-space:pre-wrap; background:#fbfbff; padding:10px; border-radius:6px; border:1px solid #e5e7f0; }
-    table.summary-table { width:100%; border-collapse:collapse; margin-top:10px }
-    table.summary-table th, table.summary-table td { border:1px solid #ddd; padding:6px; text-align:center; font-size:13px }
-    .legend { margin-top:10px; font-size:13px; color:#444 }
-    .small { font-size:12px; color:#666 }
-    .actions { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Olympiad Tracker — Exams & Books</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 18px; background:#f4f6fb; color:#111 }
+  .card { max-width:1100px; margin: auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06) }
+  h1 { margin:0 0 12px 0; font-size:20px }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px }
+  label { font-weight:600; }
+  select, input[type="number"] { padding:6px; font-size:14px }
+  .grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
+  .btn { padding:8px 10px; border:1px solid #cfcfcf; border-radius:6px; background:#fff; cursor:pointer; min-width:100px; text-align:center }
+  .btn.active { background:#2e8b57; color:#fff; border-color:#2e8b57 }
+  .section-btn.active { background:#1565c0; color:#fff; border-color:#1565c0 }
+  .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
+  .summary { margin-top:18px; }
+  table.summary-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px }
+  table.summary-table th, table.summary-table td { border:1px solid #ddd; padding:6px; text-align:center }
+  .legend { margin-top:8px; font-size:13px; color:#444 }
+  .small { font-size:12px; color:#666 }
+</style>
 </head>
 <body>
   <div class="card">
@@ -33,26 +32,23 @@
       <select id="classSelect"></select>
 
       <label for="rollInput">Roll No</label>
-      <input id="rollInput" type="number" min="1" max="250" placeholder="(type digits anywhere)" />
+      <input id="rollInput" type="number" min="1" max="250" placeholder="(focus to type roll#)" />
 
       <label>Section</label>
-      <div id="sectionButtons" class="grid">
-        <!-- A..E will be generated -->
-      </div>
-      <div class="small">Shortcuts: <strong>Shift+1..8</strong> = Exams, <strong>Q W E R T Y U I</strong> = Books, <strong>Z/X/C/V/B</strong> = Section A–E, digits = roll number</div>
+      <div id="sectionButtons" class="grid"></div>
     </div>
 
     <div>
-      <h3 style="margin:8px 0 4px 0">Exams (₹150 each) — use <strong>Shift + 1..8</strong></h3>
+      <h3 style="margin:8px 0 4px 0">Exams (₹150 each) — keys: <strong>1..8</strong></h3>
       <div id="examButtons" class="grid"></div>
     </div>
 
     <div>
-      <h3 style="margin:8px 0 4px 0">Books (₹100 each, Reasoning ₹250) — keys: <strong>Q W E R T Y U I</strong></h3>
+      <h3 style="margin:8px 0 4px 0">Books (₹100 each — Reasoning ₹250) — keys: <strong>Q W E R T Y U I</strong></h3>
       <div id="bookButtons" class="grid"></div>
     </div>
 
-    <div class="controls row">
+    <div class="controls">
       <button id="prevBtn" class="btn">← Previous</button>
       <button id="nextBtn" class="btn">Next →</button>
       <button id="clearBtn" class="btn">Clear Current</button>
@@ -60,16 +56,17 @@
       <button id="exportBtn" class="btn">Export Excel/CSV</button>
     </div>
 
-    <div class="summary" id="summaryBox">
-      Loading summary...
+    <div class="legend small">
+      Shortcuts: <strong>1–8</strong> toggle Exams (when Roll input not focused), <strong>Q W E R T Y U I</strong> toggle Books, <strong>Z X C V B</strong> select Sections A–E. Use ← / → for Prev/Next. Roll number typing works when Roll field is focused.
     </div>
 
-    <div class="legend">
-      Notes: Roll numbers are not auto-filled. If a student has exams selected but no books, they are still recorded. Up to 250 students per class.
+    <div class="summary" id="summaryArea">
+      <h3>Live Summary</h3>
+      <div id="summaryTableContainer"></div>
     </div>
   </div>
 
-  <!-- XLSX fallback: if online this will generate .xlsx; if offline CSV fallback is available -->
+  <!-- XLSX library (if available online) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
@@ -81,39 +78,44 @@
     const BOOK_PRICE_DEFAULT = 100;
     const BOOK_PRICE_REASONING = 250;
 
-    // DOM
+    // DOM refs
     const classSelect = document.getElementById('classSelect');
     const rollInput = document.getElementById('rollInput');
     const examButtonsDiv = document.getElementById('examButtons');
     const bookButtonsDiv = document.getElementById('bookButtons');
     const sectionButtonsDiv = document.getElementById('sectionButtons');
-    const summaryBox = document.getElementById('summaryBox');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const summaryTableContainer = document.getElementById('summaryTableContainer');
 
-    // Data structure: data[classNumber][studentNumber] = { exams: ['GK',...], books: [...], section: 'A'|'B'.., roll: '12' }
+    // data: data[classNumber][studentNumber] = { exams:[], books:[], section:'A'..'E', roll: '123' }
     let data = JSON.parse(localStorage.getItem('olympiadData') || '{}');
 
+    // state
     let currentClass = 1;
     let currentStudent = 1;
-    let currentSection = null;
 
     // initialize UI
-    function init(){
-      // classes 1..10
-      for(let i=1;i<=10;i++){
+    function initUI(){
+      // class options
+      for(let c=1;c<=10;c++){
         const opt = document.createElement('option');
-        opt.value = i; opt.textContent = 'Class ' + i;
+        opt.value = c; opt.textContent = 'Class ' + c;
         classSelect.appendChild(opt);
       }
       classSelect.value = currentClass;
-      classSelect.addEventListener('change', e=>{
-        currentClass = parseInt(e.target.value);
+      classSelect.addEventListener('change', ()=>{
+        currentClass = Number(classSelect.value);
         currentStudent = 1;
         loadStudent();
         renderSummary();
       });
 
-      // sections A..E
-      ['A','B','C','D','E'].forEach(s => {
+      // section buttons A..E (shortcut map Z X C V B)
+      ['A','B','C','D','E'].forEach(s=>{
         const b = document.createElement('button');
         b.className = 'btn section-btn';
         b.textContent = s;
@@ -122,217 +124,217 @@
         sectionButtonsDiv.appendChild(b);
       });
 
-      // exam buttons
+      // exam buttons 1..8
       SUBJECTS.forEach((sub,i)=>{
         const b = document.createElement('button');
         b.className = 'btn';
         b.textContent = `${sub} (${i+1})`;
-        b.dataset.subject = sub;
-        b.dataset.index = i;
-        b.addEventListener('click', ()=>toggleExamByIndex(i));
+        b.dataset.sub = sub; b.dataset.idx = i;
+        b.addEventListener('click', ()=> toggleExam(i) );
         examButtonsDiv.appendChild(b);
       });
 
-      // book buttons
+      // book buttons Q-W-E-R-T-Y-U-I mapping
       SUBJECTS.forEach((sub,i)=>{
         const b = document.createElement('button');
         b.className = 'btn';
         b.textContent = sub;
-        b.dataset.subject = sub;
-        b.dataset.index = i;
-        b.addEventListener('click', ()=>toggleBookByIndex(i));
+        b.dataset.sub = sub; b.dataset.idx = i;
+        b.addEventListener('click', ()=> toggleBook(i) );
         bookButtonsDiv.appendChild(b);
       });
 
-      // navigation
-      document.getElementById('prevBtn').addEventListener('click', prevStudent);
-      document.getElementById('nextBtn').addEventListener('click', nextStudent);
-      document.getElementById('clearBtn').addEventListener('click', clearCurrent);
-      document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Reset ALL data?')){ data = {}; save(); loadStudent(); renderSummary(); }});
-      document.getElementById('exportBtn').addEventListener('click', exportAll);
+      // nav buttons
+      prevBtn.addEventListener('click', ()=> { if(currentStudent>1){ currentStudent--; loadStudent(); } });
+      nextBtn.addEventListener('click', ()=> { if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } });
+      clearBtn.addEventListener('click', clearCurrent);
+      resetBtn.addEventListener('click', ()=>{ if(confirm('Reset ALL data?')){ data = {}; saveData(); loadStudent(); renderSummary(); }});
+      exportBtn.addEventListener('click', exportAll);
 
-      // roll Input: when user focuses and edits, update storage
-      rollInput.addEventListener('input', ()=>{ saveRoll(); });
-
-      // load first student
-      loadStudent();
-      renderSummary();
+      // roll input saves on change
+      rollInput.addEventListener('input', ()=> {
+        const rec = getRecord(currentClass, currentStudent, true);
+        rec.roll = rollInput.value.trim();
+        saveData();
+      });
 
       // keyboard handling
-      window.addEventListener('keydown', keyHandler);
+      window.addEventListener('keydown', handleKey);
+
+      // initial load
+      loadStudent();
+      renderSummary();
     }
 
-    // Helpers: get or create student record
-    function getRecord(cls, stu, makeIfMissing = true){
+    // helpers
+    function getRecord(cls, stu, createIfMissing = false){
       if(!data[cls]){
-        if(!makeIfMissing) return null;
+        if(!createIfMissing) return null;
         data[cls] = {};
       }
       if(!data[cls][stu]){
-        if(!makeIfMissing) return null;
+        if(!createIfMissing) return null;
         data[cls][stu] = { exams: [], books: [], section: null, roll: "" };
       }
       return data[cls][stu];
     }
 
-    function save(){
-      localStorage.setItem('olympiadData', JSON.stringify(data));
-    }
+    function saveData(){ localStorage.setItem('olympiadData', JSON.stringify(data)); }
 
-    // toggles
-    function toggleExamByIndex(i){
-      const r = getRecord(currentClass, currentStudent);
-      const sub = SUBJECTS[i];
-      const idx = r.exams.indexOf(sub);
-      if(idx === -1) r.exams.push(sub);
-      else r.exams.splice(idx,1);
-      save(); loadStudent(); renderSummary();
+    // toggle functions
+    function toggleExam(index){
+      const rec = getRecord(currentClass, currentStudent, true);
+      const subject = SUBJECTS[index];
+      const pos = rec.exams.indexOf(subject);
+      if(pos === -1) rec.exams.push(subject); else rec.exams.splice(pos,1);
+      saveData(); loadStudent(); renderSummary();
     }
-    function toggleBookByIndex(i){
-      const r = getRecord(currentClass, currentStudent);
-      const sub = SUBJECTS[i];
-      const idx = r.books.indexOf(sub);
-      if(idx === -1) r.books.push(sub);
-      else r.books.splice(idx,1);
-      save(); loadStudent(); renderSummary();
+    function toggleBook(index){
+      const rec = getRecord(currentClass, currentStudent, true);
+      const subject = SUBJECTS[index];
+      const pos = rec.books.indexOf(subject);
+      if(pos === -1) rec.books.push(subject); else rec.books.splice(pos,1);
+      saveData(); loadStudent(); renderSummary();
     }
     function selectSection(s){
-      const r = getRecord(currentClass, currentStudent);
-      r.section = s;
-      save(); loadStudent(); renderSummary();
-    }
-    function saveRoll(){
-      const val = rollInput.value.trim();
-      const r = getRecord(currentClass, currentStudent);
-      r.roll = val;
-      save(); renderSummary();
+      const rec = getRecord(currentClass, currentStudent, true);
+      rec.section = s;
+      saveData(); loadStudent(); renderSummary();
     }
 
-    // navigation
-    function prevStudent(){ if(currentStudent>1){ currentStudent--; loadStudent(); } }
-    function nextStudent(){ if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } }
-    const MAX_STUDENTS = MAX_STUDENTS_LOCAL();
-    function MAX_STUDENTS_LOCAL(){ return (typeof MAX_STUDENTS === 'undefined') ? 250 : MAX_STUDENTS; }
-    // Note: above is placeholder; we'll just use MAX_STUDENTS constant defined earlier (250).
-    // But easier: set MAX_STUDENTS to 250 now:
-    // (we will ignore the earlier wrapper: use const below)
-    // Actually rewrite:
-    // done in top: const MAX_STUDENTS = 250; but to keep code simple:
-    // We'll just use 250 in nextStudent check:
-    function nextStudent(){ if(currentStudent < 250){ currentStudent++; loadStudent(); } }
-
-    // But we already defined nextStudent above; to avoid duplicate, define properly:
-    // We'll rewrite navigation functions below to be correct.
-
-    // We'll redefine prev/next to avoid confusion.
-    function prevStudent(){
-      if (currentStudent > 1) {
-        currentStudent--;
-        loadStudent();
-      }
-    }
-    function nextStudent(){
-      if (currentStudent < 250) {
-        currentStudent++;
-        loadStudent();
-      }
-    }
-
-    // Clear current
     function clearCurrent(){
       if(data[currentClass] && data[currentClass][currentStudent]){
         delete data[currentClass][currentStudent];
-        save(); loadStudent(); renderSummary();
-      } else {
-        // nothing to clear
+        saveData();
       }
+      loadStudent();
+      renderSummary();
     }
 
-    // loading a student into UI
     function loadStudent(){
-      // ensure class select shows current
-      classSelect.value = currentClass;
-      const record = getRecord(currentClass, currentStudent, false);
-      // reset UI
+      // clear UI toggles
       document.querySelectorAll('#examButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#bookButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#sectionButtons .section-btn').forEach(b=>b.classList.remove('active'));
       rollInput.value = '';
-      currentSection = null;
 
-      if(record){
-        // exams
-        record.exams.forEach(sub=>{
-          const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.subject === sub);
+      // fill if exists
+      const rec = getRecord(currentClass, currentStudent, false);
+      if(rec){
+        // set exam buttons
+        rec.exams.forEach(sub=>{
+          const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
         });
-        // books
-        record.books.forEach(sub=>{
-          const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.subject === sub);
+        // set book buttons
+        rec.books.forEach(sub=>{
+          const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
         });
         // section
-        if(record.section){
-          currentSection = record.section;
-          const secBtn = Array.from(sectionButtonsDiv.children).find(x => x.dataset.section === record.section);
+        if(rec.section){
+          const secBtn = Array.from(sectionButtonsDiv.children).find(x => x.dataset.section === rec.section);
           if(secBtn) secBtn.classList.add('active');
         }
         // roll
-        if(record.roll) rollInput.value = record.roll;
+        if(rec.roll) rollInput.value = rec.roll;
       }
-      // show position
-      document.getElementById('studentInfo')?.remove(); // remove old
-      const info = document.createElement('div');
-      info.id = 'studentInfo';
-      info.style.marginTop = '6px';
-      info.innerText = `Class ${currentClass} — Student ${currentStudent}`;
-      // attach if not present
-      if(document.querySelector('.controls')) {
-        // nothing
-      } else {
-        // place info below navigation - but simpler: append to card bottom
-      }
-      // update summary
-      renderSummary();
+      updatePosition();
     }
 
-    // summary: class-wise per-subject counts for both exams and books + money columns
-    function renderSummary(){
-      // Prepare class-wise matrix
-      const classesPresent = Object.keys(data).sort((a,b)=>Number(a)-Number(b));
-      let html = '';
-      if(classesPresent.length === 0){
-        summaryBox.innerText = 'No data yet.';
+    function updatePosition(){
+      // show current student position near controls (append if not present)
+      let pos = document.getElementById('positionDisplay');
+      if(!pos){
+        pos = document.createElement('div'); pos.id = 'positionDisplay'; pos.style.marginTop = '8px';
+        document.querySelector('.card').insertBefore(pos, summaryTableContainer.parentNode);
+      }
+      pos.textContent = `Class ${currentClass} • Student ${currentStudent}`;
+    }
+
+    // keyboard handler
+    function handleKey(e){
+      const active = document.activeElement;
+      const activeTag = active && active.tagName ? active.tagName.toUpperCase() : null;
+
+      // If typing in any input (except rollInput) or textarea, don't intercept
+      if(activeTag === 'INPUT' && active !== rollInput) return;
+      if(activeTag === 'TEXTAREA') return;
+
+      // Section keys: Z X C V B => A B C D E
+      const secMap = { 'Z':'A', 'X':'B', 'C':'C', 'V':'D', 'B':'E' };
+      const keyUpper = e.key.toUpperCase();
+
+      // Arrow keys navigation
+      if(e.key === 'ArrowRight'){ e.preventDefault(); if(currentStudent < MAX_STUDENTS) { currentStudent++; loadStudent(); } return; }
+      if(e.key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent > 1) { currentStudent--; loadStudent(); } return; }
+
+      // If rollInput is focused: let typing and backspace behave normally (user types roll)
+      if(document.activeElement === rollInput) return; // avoid hijacking keys while user types roll
+
+      // Number keys 1..8 -> toggle exams (only when rollInput is NOT focused)
+      if(/^[1-8]$/.test(e.key)){
+        e.preventDefault();
+        const idx = Number(e.key) - 1;
+        toggleExam(idx);
         return;
       }
 
-      // Table header
-      html += '<table class="summary-table"><tr><th>Class</th>';
+      // Book keys Q W E R T Y U I
+      const bookOrder = ['Q','W','E','R','T','Y','U','I'];
+      const bidx = bookOrder.indexOf(keyUpper);
+      if(bidx >= 0){
+        e.preventDefault();
+        toggleBook(bidx);
+        return;
+      }
+
+      // Section keys
+      if(secMap[keyUpper]){
+        e.preventDefault();
+        selectSection(secMap[keyUpper]);
+        return;
+      }
+
+      // If user types digits while rollInput is not focused, we decided to interpret them as exam toggles above.
+      // So nothing else to do.
+    }
+
+    // Render summary: class-wise table with exam/book counts and revenue
+    function renderSummary(){
+      const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
+      if(classes.length === 0){
+        summaryTableContainer.innerHTML = '<div class="small">No data yet.</div>';
+        return;
+      }
+
+      // table header
+      let html = '<table class="summary-table"><tr><th>Class</th>';
       SUBJECTS.forEach(s => { html += `<th>${s} (Exam)</th><th>${s} (Book)</th>`; });
       html += '<th>Exam ₹</th><th>Book ₹</th><th>Total ₹</th></tr>';
 
       let grandExam = 0, grandBook = 0, grandTotal = 0;
-      for(let cls of classesPresent){
-        // counts per subject
-        const examCount = SUBJECTS.map(()=>0);
-        const bookCount = SUBJECTS.map(()=>0);
+
+      for(const cls of classes){
+        const examCount = Array(SUBJECTS.length).fill(0);
+        const bookCount = Array(SUBJECTS.length).fill(0);
         let examRevenue = 0, bookRevenue = 0;
 
-        for(const stu in data[cls]){
+        for(const stu of Object.keys(data[cls])){
           const rec = data[cls][stu];
-          // handle if stored as booleans arrays or as names
           const recExams = Array.isArray(rec.exams) ? rec.exams : [];
           const recBooks = Array.isArray(rec.books) ? rec.books : [];
 
           recExams.forEach(sub => {
-            const idx = SUBJECTS.indexOf(sub);
-            if(idx>=0){ examCount[idx]++; examRevenue += EXAM_FEE; }
+            const i = SUBJECTS.indexOf(sub);
+            if(i >= 0){ examCount[i]++; examRevenue += EXAM_FEE; }
           });
           recBooks.forEach(sub => {
-            const idx = SUBJECTS.indexOf(sub);
-            if(idx>=0){ bookCount[idx]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
+            const i = SUBJECTS.indexOf(sub);
+            if(i >= 0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
           });
         }
+
         const classTotal = examRevenue + bookRevenue;
         grandExam += examRevenue; grandBook += bookRevenue; grandTotal += classTotal;
 
@@ -343,95 +345,28 @@
         html += `<td>₹${examRevenue}</td><td>₹${bookRevenue}</td><td>₹${classTotal}</td></tr>`;
       }
 
-      // Grand totals row
+      // grand row
       html += `<tr style="font-weight:700"><td>Grand Total</td>`;
-      // we won't show per-subject grand columns here to keep it simple; show blanks for those columns
       for(let i=0;i<SUBJECTS.length;i++) html += `<td></td><td></td>`;
       html += `<td>₹${grandExam}</td><td>₹${grandBook}</td><td>₹${grandTotal}</td></tr>`;
 
       html += '</table>';
-      summaryBox.innerHTML = html;
+      summaryTableContainer.innerHTML = html;
     }
 
-    // keyboard handler
-    function keyHandler(e){
-      // If user is focused inside an input other than rollInput, skip
-      const active = document.activeElement;
-      const activeTag = active && active.tagName ? active.tagName.toUpperCase() : null;
-      // If user typed inside any other input or textarea, don't hijack
-      if(activeTag === 'INPUT' && active !== rollInput) return;
-      if(activeTag === 'TEXTAREA') return;
-
-      const key = e.key;
-
-      // Roll-number entry: digits WITHOUT Shift -> append to roll input, unless the roll input is focused (then default)
-      if(/^[0-9]$/.test(key) && !e.shiftKey){
-        // if rollInput is focused, let default behavior happen
-        if(document.activeElement !== rollInput){
-          e.preventDefault();
-          // append digit
-          rollInput.value = (rollInput.value === null) ? key : String(rollInput.value) + key;
-          saveRoll();
-        }
-        return;
-      }
-
-      // Backspace when not focused on roll input: delete last digit
-      if(key === 'Backspace' && document.activeElement !== rollInput){
-        e.preventDefault();
-        rollInput.value = String(rollInput.value || '');
-        rollInput.value = rollInput.value.slice(0, -1);
-        saveRoll();
-        return;
-      }
-
-      // Arrow navigation
-      if(key === 'ArrowRight'){ e.preventDefault(); nextStudent(); return; }
-      if(key === 'ArrowLeft'){ e.preventDefault(); prevStudent(); return; }
-
-      // Exams: require Shift + number 1..8
-      if(e.shiftKey && /^[1-8]$/.test(key)){
-        e.preventDefault();
-        const idx = Number(key) - 1;
-        toggleExamByIndex(idx);
-        return;
-      }
-
-      // Books: Q W E R T Y U I
-      const bookKeyOrder = ['Q','W','E','R','T','Y','U','I'];
-      const up = key.toUpperCase();
-      const bidx = bookKeyOrder.indexOf(up);
-      if(bidx >= 0){
-        e.preventDefault();
-        toggleBookByIndex(bidx);
-        return;
-      }
-
-      // Sections: Z X C V B -> A..E
-      const sectionMap = { 'Z':'A','X':'B','C':'C','V':'D','B':'E' };
-      if(sectionMap[up]){
-        e.preventDefault();
-        selectSection(sectionMap[up]);
-        return;
-      }
-    }
-
-    // Export function: creates XLSX using library if present, else CSV fallback
+    // Export all data:
+    // Sheet1: Students (detailed); Sheet2: ClassSummary
     function exportAll(){
-      // Build header
-      const header = [
-        "Class", "StudentNumber", "Section", "Roll", "ExamList", "BookList", "ExamCost", "BookCost", "Total"
-      ];
-      // add per-subject two columns each
-      SUBJECTS.forEach(s=>{
-        header.push(`${s} (Exam)`);
-        header.push(`${s} (Book)`);
-      });
+      const rowsStudents = [];
+      // header
+      const header = ["Class","StudentNumber","Section","Roll","ExamList","BookList","ExamCost","BookCost","Total"];
+      SUBJECTS.forEach(s => { header.push(`${s} (Exam)`); header.push(`${s} (Book)`); });
+      rowsStudents.push(header);
 
-      const rows = [header];
-
-      for(const cls of Object.keys(data).sort((a,b)=>Number(a)-Number(b))){
-        for(const stu of Object.keys(data[cls]).sort((a,b)=>Number(a)-Number(b))){
+      const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
+      for(const cls of classes){
+        const students = Object.keys(data[cls]).map(Number).sort((a,b)=>a-b);
+        for(const stu of students){
           const rec = data[cls][stu];
           const exams = Array.isArray(rec.exams) ? rec.exams : [];
           const books = Array.isArray(rec.books) ? rec.books : [];
@@ -439,83 +374,59 @@
           const bookCost = (books.reduce((sum, sub) => sum + (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT), 0) || 0);
           const total = examCost + bookCost;
           const row = [cls, stu, rec.section || '', rec.roll || '', exams.join(', '), books.join(', '), examCost, bookCost, total];
-          // per-subject flags
-          SUBJECTS.forEach(s=>{
-            row.push(exams.includes(s) ? 1 : 0);
-            row.push(books.includes(s) ? 1 : 0);
-          });
-          rows.push(row);
+          SUBJECTS.forEach(s => { row.push(exams.includes(s) ? 1 : 0); row.push(books.includes(s) ? 1 : 0); });
+          rowsStudents.push(row);
         }
       }
 
-      // try XLSX
+      // Class summary sheet
+      const rowsClass = [];
+      const headerC = ["Class","Total Exam ₹","Total Book ₹","Total ₹"];
+      // add per-subject counts
+      SUBJECTS.forEach(s => { headerC.push(`${s} (Exam)`); headerC.push(`${s} (Book)`); });
+      rowsClass.push(headerC);
+
+      for(const cls of classes){
+        const examCount = Array(SUBJECTS.length).fill(0);
+        const bookCount = Array(SUBJECTS.length).fill(0);
+        let examRevenue = 0, bookRevenue = 0;
+        for(const stu of Object.keys(data[cls])){
+          const rec = data[cls][stu];
+          const recExams = Array.isArray(rec.exams) ? rec.exams : [];
+          const recBooks = Array.isArray(rec.books) ? rec.books : [];
+          recExams.forEach(sub => { const i = SUBJECTS.indexOf(sub); if(i>=0){ examCount[i]++; examRevenue += EXAM_FEE; }});
+          recBooks.forEach(sub => { const i = SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }});
+        }
+        const row = [cls, examRevenue, bookRevenue, examRevenue + bookRevenue];
+        SUBJECTS.forEach((_,i)=>{ row.push(examCount[i]); row.push(bookCount[i]); });
+        rowsClass.push(row);
+      }
+
+      // Try to use XLSX lib if loaded
       if(window.XLSX){
-        const ws = XLSX.utils.aoa_to_sheet(rows);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Olympiad");
+        const ws1 = XLSX.utils.aoa_to_sheet(rowsStudents);
+        const ws2 = XLSX.utils.aoa_to_sheet(rowsClass);
+        XLSX.utils.book_append_sheet(wb, ws1, "Students");
+        XLSX.utils.book_append_sheet(wb, ws2, "ClassSummary");
         XLSX.writeFile(wb, "olympiad_export.xlsx");
       } else {
-        // fallback CSV
-        const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+        // fallback: produce CSV for students only, and a second csv for class summary (download zipped is complex), so offer students csv.
+        const csv = rowsStudents.map(r => r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'olympiad_export.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href = url; a.download = 'olympiad_students.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        alert('XLSX library not available: exported CSV of student data. To export .xlsx, enable internet or include the XLSX library.');
       }
     }
 
     // Start
-    init();
+    initUI();
 
-    // small fix: show first student number label in UI by adding a small info line (not required)
-    const infoDIV = document.createElement('div');
-    infoDIV.style.marginTop = '8px';
-    infoDIV.id = 'studentPosition';
-    document.querySelector('.card').appendChild(infoDIV);
-    function updatePosition(){
-      document.getElementById('studentPosition').innerText = `Class ${currentClass} • Student ${currentStudent}`;
-    }
-    // wrap loadStudent to update position
-    const originalLoad = loadStudent;
-    loadStudent = function(){
-      // call original loadStudent code defined earlier
-      // but to avoid confusion, re-run logic here:
-      // Clear UI:
-      document.querySelectorAll('#examButtons .btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('#bookButtons .btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('#sectionButtons .section-btn').forEach(b=>b.classList.remove('active'));
-      rollInput.value = '';
-      currentSection = null;
-      const record = getRecord(currentClass, currentStudent, false);
-      if(record){
-        record.exams.forEach(sub => {
-          const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.subject === sub);
-          if(btn) btn.classList.add('active');
-        });
-        record.books.forEach(sub => {
-          const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.subject === sub);
-          if(btn) btn.classList.add('active');
-        });
-        if(record.section){
-          const secBtn = Array.from(sectionButtonsDiv.children).find(x => x.dataset.section === record.section);
-          if(secBtn) { secBtn.classList.add('active'); currentSection = record.section; }
-        }
-        if(record.roll) rollInput.value = record.roll;
-      }
-      updatePosition();
-      renderSummary();
-    };
-
-    // bind previously used DOM elements to variables used in redefined functions
-    const examButtonsDiv = examButtonsDiv || document.getElementById('examButtons');
-    const bookButtonsDiv = bookButtonsDiv || document.getElementById('bookButtons');
-
-    // End of IIFE
+    // small safety: ensure loadStudent exists in this scope (it does)
+    // end of IIFE
   })();
   </script>
 </body>
