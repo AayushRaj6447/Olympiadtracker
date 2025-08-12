@@ -1,425 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Olympiad Tracker — Fixed</title>
-<style>
-  body { font-family: Arial, sans-serif; margin:18px; background:#f4f7fc; color:#111 }
-  .card { max-width:1150px; margin:auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.06) }
-  h1 { margin:0 0 12px 0 }
-  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px }
-  label { font-weight:600 }
-  select, input[type="number"] { padding:6px; font-size:14px }
-  .grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
-  .btn { padding:8px 12px; border:1px solid #cfcfcf; border-radius:6px; background:#fff; cursor:pointer; min-width:110px; text-align:center }
-  .btn.active { background:#2e8b57; color:#fff; border-color:#2e8b57 }
-  .section-btn.active { background:#1565c0; color:#fff; border-color:#1565c0 }
-  .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
-  .summary { margin-top:18px }
-  table.summary-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px }
-  table.summary-table th, table.summary-table td { border:1px solid #ddd; padding:6px; text-align:center }
-  .small { font-size:12px; color:#444; margin-top:6px }
-</style>
+    <title>Olympiad Tracker</title>
+    <style>
+        body { font-family: Arial; display: flex; gap: 20px; }
+        .panel { border: 1px solid #ccc; padding: 10px; width: 300px; }
+        .summary-table { border-collapse: collapse; width: 100%; }
+        .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 4px; text-align: center; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Olympiad Tracker — Exams & Books</h1>
 
-    <div class="row">
-      <label for="classSelect">Class</label>
-      <select id="classSelect"></select>
+<div class="panel">
+    <h3>Student Entry</h3>
+    <label>Class:
+        <select id="classSelect">
+            <option value="1">Class 1</option>
+            <option value="2">Class 2</option>
+            <option value="3">Class 3</option>
+            <option value="4">Class 4</option>
+            <option value="5">Class 5</option>
+            <option value="6">Class 6</option>
+            <option value="7">Class 7</option>
+            <option value="8">Class 8</option>
+            <option value="9">Class 9</option>
+            <option value="10">Class 10</option>
+        </select>
+    </label>
+    <br><br>
+    <label>Section:</label><br>
+    <label><input type="radio" name="section" value="A">A</label>
+    <label><input type="radio" name="section" value="B">B</label>
+    <label><input type="radio" name="section" value="C">C</label>
+    <label><input type="radio" name="section" value="D">D</label>
+    <label><input type="radio" name="section" value="E">E</label>
+    <br><br>
+    <label>Roll Number: <input type="number" id="rollNumber"></label>
+    <br><br>
 
-      <label for="rollInput">Roll No</label>
-      <input id="rollInput" type="number" min="1" max="250" placeholder="focus to type roll number" />
+    <strong>Exams (₹150 each)</strong><br>
+    <label><input type="checkbox" data-type="exam" value="GK">GK</label>
+    <label><input type="checkbox" data-type="exam" value="English">English</label>
+    <label><input type="checkbox" data-type="exam" value="Science">Science</label>
+    <label><input type="checkbox" data-type="exam" value="Maths">Maths</label>
+    <label><input type="checkbox" data-type="exam" value="Computer">Computer</label>
+    <label><input type="checkbox" data-type="exam" value="Social Studies">Social Studies</label>
+    <label><input type="checkbox" data-type="exam" value="Hindi">Hindi</label>
+    <label><input type="checkbox" data-type="exam" value="Reasoning">Reasoning</label>
+    <br><br>
 
-      <label>Section</label>
-      <div id="sectionButtons" class="grid"></div>
-    </div>
+    <strong>Books</strong><br>
+    <label><input type="checkbox" data-type="book" value="GK">GK</label>
+    <label><input type="checkbox" data-type="book" value="English">English</label>
+    <label><input type="checkbox" data-type="book" value="Science">Science</label>
+    <label><input type="checkbox" data-type="book" value="Maths">Maths</label>
+    <label><input type="checkbox" data-type="book" value="Computer">Computer</label>
+    <label><input type="checkbox" data-type="book" value="Social Studies">Social Studies</label>
+    <label><input type="checkbox" data-type="book" value="Hindi">Hindi</label>
+    <label><input type="checkbox" data-type="book" value="Reasoning">Reasoning</label>
+    <br><br>
 
-    <div>
-      <h3>Exams (₹150 each) — Keys: 1..8</h3>
-      <div id="examButtons" class="grid"></div>
-    </div>
+    <button onclick="saveStudent()">Save Student</button>
+    <button onclick="prevStudent()">Previous</button>
+    <button onclick="nextStudent()">Next</button>
+    <button onclick="exportExcel()">Export</button>
+</div>
 
-    <div>
-      <h3>Books (₹100 each — Reasoning ₹250) — Keys: Q W E R T Y U I</h3>
-      <div id="bookButtons" class="grid"></div>
-    </div>
+<div class="panel">
+    <h3>Live Summary</h3>
+    <div id="summary"></div>
+</div>
 
-    <div class="controls">
-      <button id="prevBtn" class="btn">← Prev</button>
-      <button id="nextBtn" class="btn">Next →</button>
-      <button id="clearBtn" class="btn">Clear Current</button>
-      <button id="resetBtn" class="btn">Reset All</button>
-      <button id="exportBtn" class="btn">Export (XLSX/CSV)</button>
-      <button id="focusRollBtn" class="btn">Focus Roll (F)</button>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<script>
+let data = JSON.parse(localStorage.getItem("olympiadData") || "{}");
+let currentClass = "1", currentIndex = 0;
+const subjects = ["GK","English","Science","Maths","Computer","Social Studies","Hindi","Reasoning"];
 
-    <div class="small">
-      Shortcuts (when Roll field NOT focused): <strong>1–8</strong> = Exam; <strong>Q W E R T Y U I</strong> = Book; <strong>Z X C V B</strong> = Section A–E; <strong>F</strong> = focus Roll; ← / → = Prev/Next.
-      To type roll numbers, click Roll input or press <strong>F</strong>.
-    </div>
+document.getElementById("classSelect").addEventListener("change", e=>{
+    currentClass = e.target.value;
+    currentIndex = 0;
+    loadStudent();
+});
 
-    <div class="summary" id="summaryArea">
-      <h3>Live Summary</h3>
-      <div id="summaryTableContainer"></div>
-    </div>
-  </div>
+function saveStudent(){
+    if(!data[currentClass]) data[currentClass] = [];
+    const section = document.querySelector('input[name="section"]:checked')?.value || "";
+    const rollNumber = document.getElementById("rollNumber").value || "";
+    const exams = [...document.querySelectorAll('input[data-type="exam"]:checked')].map(c=>c.value);
+    const books = [...document.querySelectorAll('input[data-type="book"]:checked')].map(c=>c.value);
+    data[currentClass][currentIndex] = {section, rollNumber, exams, books};
+    localStorage.setItem("olympiadData", JSON.stringify(data));
+    updateSummary();
+}
 
-  <!-- XLSX library (if available online) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+function loadStudent(){
+    const record = data[currentClass]?.[currentIndex] || {};
+    document.querySelectorAll('input[name="section"]').forEach(r=>r.checked = (r.value===record.section));
+    document.getElementById("rollNumber").value = record.rollNumber || "";
+    document.querySelectorAll('input[data-type="exam"]').forEach(c=>c.checked = record.exams?.includes(c.value) || false);
+    document.querySelectorAll('input[data-type="book"]').forEach(c=>c.checked = record.books?.includes(c.value) || false);
+}
 
-  <script>
-  (function(){
-    // CONFIG
-    const SUBJECTS = ["GK","English","Science","Maths","Computer","Social Studies","Hindi","Reasoning"];
-    const MAX_STUDENTS = 250;
-    const EXAM_FEE = 150;
-    const BOOK_PRICE_DEFAULT = 100;
-    const BOOK_PRICE_REASONING = 250;
+function prevStudent(){
+    if(currentIndex>0){ currentIndex--; loadStudent(); }
+}
+function nextStudent(){
+    currentIndex++;
+    loadStudent();
+}
 
-    // DOM refs
-    const classSelect = document.getElementById('classSelect');
-    const rollInput = document.getElementById('rollInput');
-    const examButtonsDiv = document.getElementById('examButtons');
-    const bookButtonsDiv = document.getElementById('bookButtons');
-    const sectionButtonsDiv = document.getElementById('sectionButtons');
-    const summaryTableContainer = document.getElementById('summaryTableContainer');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const focusRollBtn = document.getElementById('focusRollBtn');
-
-    // storage: data[classNumber][studentNumber] = { exams:[], books:[], section:'A'..'E', roll: '123' }
-    let data = JSON.parse(localStorage.getItem('olympiadData') || '{}');
-
-    // state
-    let currentClass = 1;
-    let currentStudent = 1;
-
-    // init UI
-    function init(){
-      // classes 1..10
-      for(let c=1;c<=10;c++){
-        const opt = document.createElement('option');
-        opt.value = c; opt.textContent = 'Class ' + c;
-        classSelect.appendChild(opt);
-      }
-      classSelect.value = currentClass;
-      classSelect.addEventListener('change', ()=>{
-        currentClass = Number(classSelect.value);
-        currentStudent = 1;
-        loadStudent();
-        renderSummary();
-      });
-
-      // section buttons A..E (Z X C V B)
-      ['A','B','C','D','E'].forEach(s=>{
-        const b = document.createElement('button');
-        b.className = 'btn section-btn';
-        b.textContent = s;
-        b.dataset.section = s;
-        b.addEventListener('click', ()=> selectSection(s) );
-        sectionButtonsDiv.appendChild(b);
-      });
-
-      // exam buttons 1..8
-      SUBJECTS.forEach((sub,i)=>{
-        const b = document.createElement('button');
-        b.className = 'btn';
-        b.textContent = `${sub} (${i+1})`;
-        b.dataset.sub = sub; b.dataset.idx = i;
-        b.addEventListener('click', ()=> toggleExam(i) );
-        examButtonsDiv.appendChild(b);
-      });
-
-      // book buttons Q W E R T Y U I
-      SUBJECTS.forEach((sub,i)=>{
-        const b = document.createElement('button');
-        b.className = 'btn';
-        b.textContent = sub;
-        b.dataset.sub = sub; b.dataset.idx = i;
-        b.addEventListener('click', ()=> toggleBook(i) );
-        bookButtonsDiv.appendChild(b);
-      });
-
-      // nav and actions
-      prevBtn.addEventListener('click', ()=> { if(currentStudent>1){ currentStudent--; loadStudent(); } });
-      nextBtn.addEventListener('click', ()=> { if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } });
-      clearBtn.addEventListener('click', clearCurrent);
-      resetBtn.addEventListener('click', ()=>{ if(confirm('Reset ALL data?')){ data = {}; saveData(); loadStudent(); renderSummary(); }});
-      exportBtn.addEventListener('click', exportAll);
-      focusRollBtn.addEventListener('click', ()=> { rollInput.focus(); });
-
-      // roll input saves on change
-      rollInput.addEventListener('input', ()=> {
-        const rec = getRecord(currentClass, currentStudent, true);
-        rec.roll = (rollInput.value || '').toString().trim();
-        saveData();
-      });
-
-      // keyboard events
-      window.addEventListener('keydown', handleKey);
-
-      // first load
-      loadStudent();
-      renderSummary();
-    }
-
-    // data helpers
-    function getRecord(cls, stu, createIfMissing = false){
-      if(!data[cls]){
-        if(!createIfMissing) return null;
-        data[cls] = {};
-      }
-      if(!data[cls][stu]){
-        if(!createIfMissing) return null;
-        data[cls][stu] = { exams: [], books: [], section: null, roll: "" };
-      }
-      return data[cls][stu];
-    }
-    function saveData(){ localStorage.setItem('olympiadData', JSON.stringify(data)); }
-
-    // toggles
-    function toggleExam(idx){
-      const rec = getRecord(currentClass, currentStudent, true);
-      const sub = SUBJECTS[idx];
-      const pos = rec.exams.indexOf(sub);
-      if(pos === -1) rec.exams.push(sub); else rec.exams.splice(pos,1);
-      saveData(); loadStudent(); renderSummary();
-    }
-    function toggleBook(idx){
-      const rec = getRecord(currentClass, currentStudent, true);
-      const sub = SUBJECTS[idx];
-      const pos = rec.books.indexOf(sub);
-      if(pos === -1) rec.books.push(sub); else rec.books.splice(pos,1);
-      saveData(); loadStudent(); renderSummary();
-    }
-    function selectSection(s){
-      const rec = getRecord(currentClass, currentStudent, true);
-      rec.section = s;
-      saveData(); loadStudent(); renderSummary();
-    }
-
-    function clearCurrent(){
-      if(data[currentClass] && data[currentClass][currentStudent]){
-        delete data[currentClass][currentStudent];
-        saveData();
-      }
-      loadStudent(); renderSummary();
-    }
-
-    // load current student record onto UI
-    function loadStudent(){
-      // clear UI states
-      document.querySelectorAll('#examButtons .btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('#bookButtons .btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('#sectionButtons .section-btn').forEach(b=>b.classList.remove('active'));
-      rollInput.value = '';
-
-      const rec = getRecord(currentClass, currentStudent, false);
-      if(rec){
-        // set exam buttons active
-        rec.exams.forEach(sub=>{
-          const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.sub === sub);
-          if(btn) btn.classList.add('active');
+function updateSummary(){
+    let html = "<table class='summary-table'><tr><th>Class</th>";
+    subjects.forEach(s=>html += `<th>${s} Books</th>`);
+    html += "</tr>";
+    for(let cls=1; cls<=10; cls++){
+        html += `<tr><td>${cls}</td>`;
+        subjects.forEach(sub=>{
+            let count = (data[cls]||[]).filter(stu=>stu.books?.includes(sub)).length;
+            html += `<td>${count}</td>`;
         });
-        // set book buttons active
-        rec.books.forEach(sub=>{
-          const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.sub === sub);
-          if(btn) btn.classList.add('active');
+        html += "</tr>";
+    }
+    html += "</table>";
+    document.getElementById("summary").innerHTML = html;
+}
+updateSummary();
+
+function exportExcel(){
+    let exportData = [];
+    for(let cls=1; cls<=10; cls++){
+        (data[cls]||[]).forEach((stu,i)=>{
+            exportData.push({
+                Class: cls,
+                Section: stu.section || "",
+                RollNumber: stu.rollNumber || "",
+                Exams: stu.exams?.join(", ") || "",
+                Books: stu.books?.join(", ") || ""
+            });
         });
-        // set section active
-        if(rec.section){
-          const secBtn = Array.from(sectionButtonsDiv.children).find(x => x.dataset.section === rec.section);
-          if(secBtn) secBtn.classList.add('active');
-        }
-        // roll
-        if(rec.roll) rollInput.value = rec.roll;
-      }
-      updatePosition();
     }
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Olympiad");
+    XLSX.writeFile(wb, "Olympiad_Data.xlsx");
+}
 
-    function updatePosition(){
-      let pos = document.getElementById('positionDisplay');
-      if(!pos){
-        pos = document.createElement('div'); pos.id = 'positionDisplay'; pos.style.marginTop='8px';
-        document.querySelector('.card').insertBefore(pos, summaryTableContainer.parentNode);
-      }
-      pos.textContent = `Class ${currentClass} • Student ${currentStudent}`;
+document.addEventListener("keydown", e=>{
+    if(e.target.tagName === "INPUT") return; // don't hijack typing in roll number
+
+    // Exam shortcuts (1–8)
+    if(e.key >= "1" && e.key <= "8"){
+        const idx = parseInt(e.key)-1;
+        const cb = document.querySelectorAll('input[data-type="exam"]')[idx];
+        cb.checked = !cb.checked;
+        saveStudent();
     }
-
-    // keyboard handler
-    function handleKey(e){
-      // if other input is focused (not rollInput) or textarea -> ignore
-      const active = document.activeElement;
-      const activeTag = active && active.tagName ? active.tagName.toUpperCase() : null;
-      if(activeTag === 'INPUT' && active !== rollInput) return;
-      if(activeTag === 'TEXTAREA') return;
-
-      const key = e.key;
-      const keyU = key.toUpperCase();
-
-      // navigation arrows
-      if(key === 'ArrowRight'){ e.preventDefault(); if(currentStudent < MAX_STUDENTS){ currentStudent++; loadStudent(); } return; }
-      if(key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent > 1){ currentStudent--; loadStudent(); } return; }
-
-      // If rollInput is focused, do nothing (allow user typing roll)
-      if(document.activeElement === rollInput) return;
-
-      // Exams: 1..8
-      if(/^[1-8]$/.test(key)){
-        e.preventDefault();
-        toggleExam(Number(key)-1);
-        return;
-      }
-
-      // Books: Q W E R T Y U I
-      const bookOrder = ['Q','W','E','R','T','Y','U','I'];
-      const bidx = bookOrder.indexOf(keyU);
-      if(bidx >= 0){
-        e.preventDefault();
-        toggleBook(bidx);
-        return;
-      }
-
-      // Sections: Z X C V B => A B C D E
-      const secMap = { 'Z':'A','X':'B','C':'C','V':'D','B':'E' };
-      if(secMap[keyU]){
-        e.preventDefault();
-        selectSection(secMap[keyU]);
-        return;
-      }
-
-      // Focus roll input: F
-      if(keyU === 'F'){
-        e.preventDefault();
-        rollInput.focus();
-        return;
-      }
-
-      // otherwise do nothing
+    // Book shortcuts (Q–I for books)
+    const bookKeys = ["q","w","e","r","t","y","u","i"];
+    if(bookKeys.includes(e.key.toLowerCase())){
+        const idx = bookKeys.indexOf(e.key.toLowerCase());
+        const cb = document.querySelectorAll('input[data-type="book"]')[idx];
+        cb.checked = !cb.checked;
+        saveStudent();
     }
-
-    // render summary
-    function renderSummary(){
-      const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
-      if(classes.length === 0){
-        summaryTableContainer.innerHTML = '<div class="small">No data yet.</div>';
-        return;
-      }
-
-      let html = '<table class="summary-table"><tr><th>Class</th>';
-      SUBJECTS.forEach(s => { html += `<th>${s} (Exam)</th><th>${s} (Book)</th>`; });
-      html += '<th>Exam ₹</th><th>Book ₹</th><th>Total ₹</th></tr>';
-
-      let grandExam=0, grandBook=0, grandTotal=0;
-      for(const cls of classes){
-        const examCount = Array(SUBJECTS.length).fill(0);
-        const bookCount = Array(SUBJECTS.length).fill(0);
-        let examRevenue = 0, bookRevenue = 0;
-
-        for(const stu of Object.keys(data[cls])){
-          const rec = data[cls][stu];
-          (rec.exams || []).forEach(sub => {
-            const i = SUBJECTS.indexOf(sub);
-            if(i >= 0){ examCount[i]++; examRevenue += EXAM_FEE; }
-          });
-          (rec.books || []).forEach(sub => {
-            const i = SUBJECTS.indexOf(sub);
-            if(i >= 0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
-          });
-        }
-
-        const classTotal = examRevenue + bookRevenue;
-        grandExam += examRevenue; grandBook += bookRevenue; grandTotal += classTotal;
-
-        html += `<tr><td>Class ${cls}</td>`;
-        for(let i=0;i<SUBJECTS.length;i++){
-          html += `<td>${examCount[i]}</td><td>${bookCount[i]}</td>`;
-        }
-        html += `<td>₹${examRevenue}</td><td>₹${bookRevenue}</td><td>₹${classTotal}</td></tr>`;
-      }
-
-      // grand total row
-      html += `<tr style="font-weight:700"><td>Grand Total</td>`;
-      for(let i=0;i<SUBJECTS.length;i++) html += `<td></td><td></td>`;
-      html += `<td>₹${grandExam}</td><td>₹${grandBook}</td><td>₹${grandTotal}</td></tr>`;
-
-      html += '</table>';
-      summaryTableContainer.innerHTML = html;
+    // Section shortcuts (A–E keys z,x,c,v,b)
+    const sectionKeys = ["z","x","c","v","b"];
+    if(sectionKeys.includes(e.key.toLowerCase())){
+        const idx = sectionKeys.indexOf(e.key.toLowerCase());
+        document.querySelectorAll('input[name="section"]')[idx].checked = true;
+        saveStudent();
     }
+    // Navigation
+    if(e.key === "ArrowRight") nextStudent();
+    if(e.key === "ArrowLeft") prevStudent();
+});
+</script>
 
-    // export
-    function exportAll(){
-      const header = ["Class","StudentNumber","Section","Roll","ExamList","BookList","ExamCost","BookCost","Total"];
-      SUBJECTS.forEach(s => { header.push(`${s} (Exam)`); header.push(`${s} (Book)`); });
-      const studentsRows = [header];
-
-      const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
-      for(const cls of classes){
-        const students = Object.keys(data[cls]).map(Number).sort((a,b)=>a-b);
-        for(const stu of students){
-          const rec = data[cls][stu];
-          const exams = rec.exams || [];
-          const books = rec.books || [];
-          const examCost = (exams.length || 0) * EXAM_FEE;
-          const bookCost = (books.reduce((sum, s) => sum + (s==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT), 0) || 0);
-          const total = examCost + bookCost;
-          const row = [cls, stu, rec.section || '', rec.roll || '', exams.join(', '), books.join(', '), examCost, bookCost, total];
-          SUBJECTS.forEach(s => { row.push(exams.includes(s)?1:0); row.push(books.includes(s)?1:0); });
-          studentsRows.push(row);
-        }
-      }
-
-      // class summary
-      const classHeader = ["Class","Exam ₹","Book ₹","Total ₹"];
-      SUBJECTS.forEach(s => { classHeader.push(`${s} (Exam)`); classHeader.push(`${s} (Book)`); });
-      const classRows = [classHeader];
-      for(const cls of classes){
-        const examCount = Array(SUBJECTS.length).fill(0);
-        const bookCount = Array(SUBJECTS.length).fill(0);
-        let examRevenue=0, bookRevenue=0;
-        for(const stu of Object.keys(data[cls])){
-          const rec = data[cls][stu];
-          (rec.exams || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ examCount[i]++; examRevenue+=EXAM_FEE; }});
-          (rec.books || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT); }});
-        }
-        const row = [cls, examRevenue, bookRevenue, examRevenue+bookRevenue];
-        for(let i=0;i<SUBJECTS.length;i++){ row.push(examCount[i]); row.push(bookCount[i]); }
-        classRows.push(row);
-      }
-
-      if(window.XLSX){
-        const wb = XLSX.utils.book_new();
-        const ws1 = XLSX.utils.aoa_to_sheet(studentsRows);
-        const ws2 = XLSX.utils.aoa_to_sheet(classRows);
-        XLSX.utils.book_append_sheet(wb, ws1, 'Students');
-        XLSX.utils.book_append_sheet(wb, ws2, 'ClassSummary');
-        XLSX.writeFile(wb, 'olympiad_export.xlsx');
-      } else {
-        // fallback: download two CSV files
-        downloadCSV(studentsRows, 'olympiad_students.csv');
-        downloadCSV(classRows, 'olympiad_class_summary.csv');
-        alert('XLSX library not available — exported CSV files for Students and ClassSummary.');
-      }
-    }
-    function downloadCSV(rows, filename){
-      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    // Start
-    init();
-
-  })();
-  </script>
 </body>
 </html>
