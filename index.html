@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Olympiad Tracker — Fixed Live Feed + Export</title>
+<title>Olympiad Tracker — Fixed</title>
 <style>
   body { font-family: Arial, sans-serif; margin:18px; background:#f4f7fc; color:#111 }
   .card { max-width:1150px; margin:auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.06) }
@@ -16,11 +16,10 @@
   .btn.active { background:#2e8b57; color:#fff; border-color:#2e8b57 }
   .section-btn.active { background:#1565c0; color:#fff; border-color:#1565c0 }
   .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
-  .summary-box { margin-top:18px }
+  .summary { margin-top:18px }
   table.summary-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px }
   table.summary-table th, table.summary-table td { border:1px solid #ddd; padding:6px; text-align:center }
   .small { font-size:12px; color:#444; margin-top:6px }
-  .note { color:#666; font-size:13px; margin-top:8px }
 </style>
 </head>
 <body>
@@ -54,20 +53,21 @@
       <button id="clearBtn" class="btn">Clear Current</button>
       <button id="resetBtn" class="btn">Reset All</button>
       <button id="exportBtn" class="btn">Export (XLSX/CSV)</button>
+      <button id="focusRollBtn" class="btn">Focus Roll (F)</button>
     </div>
 
-    <div class="note">
-      Shortcuts (when Roll field NOT focused): 1–8 = Exam; Q W E R T Y U I = Book; Z X C V B = Section A–E; ← / → = Prev/Next. 
-      To type roll numbers, click the Roll No field (or focus it) and type.
+    <div class="small">
+      Shortcuts (when Roll field NOT focused): <strong>1–8</strong> = Exam; <strong>Q W E R T Y U I</strong> = Book; <strong>Z X C V B</strong> = Section A–E; <strong>F</strong> = focus Roll; ← / → = Prev/Next.
+      To type roll numbers, click Roll input or press <strong>F</strong>.
     </div>
 
-    <div class="summary-box">
-      <h3>Live Summary (class-wise subject distribution)</h3>
+    <div class="summary" id="summaryArea">
+      <h3>Live Summary</h3>
       <div id="summaryTableContainer"></div>
     </div>
   </div>
 
-  <!-- XLSX lib (online); code will fallback to CSV if not available -->
+  <!-- XLSX library (if available online) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
@@ -79,7 +79,7 @@
     const BOOK_PRICE_DEFAULT = 100;
     const BOOK_PRICE_REASONING = 250;
 
-    // DOM
+    // DOM refs
     const classSelect = document.getElementById('classSelect');
     const rollInput = document.getElementById('rollInput');
     const examButtonsDiv = document.getElementById('examButtons');
@@ -91,17 +91,18 @@
     const clearBtn = document.getElementById('clearBtn');
     const resetBtn = document.getElementById('resetBtn');
     const exportBtn = document.getElementById('exportBtn');
+    const focusRollBtn = document.getElementById('focusRollBtn');
 
-    // data: data[classNumber][studentNumber] = { exams:[], books:[], section:'A'..'E', roll: '123' }
+    // storage: data[classNumber][studentNumber] = { exams:[], books:[], section:'A'..'E', roll: '123' }
     let data = JSON.parse(localStorage.getItem('olympiadData') || '{}');
 
     // state
     let currentClass = 1;
     let currentStudent = 1;
 
-    // initialize UI
+    // init UI
     function init(){
-      // class options 1..10
+      // classes 1..10
       for(let c=1;c<=10;c++){
         const opt = document.createElement('option');
         opt.value = c; opt.textContent = 'Class ' + c;
@@ -115,13 +116,13 @@
         renderSummary();
       });
 
-      // section buttons: Z X C V B => A..E
+      // section buttons A..E (Z X C V B)
       ['A','B','C','D','E'].forEach(s=>{
         const b = document.createElement('button');
         b.className = 'btn section-btn';
         b.textContent = s;
         b.dataset.section = s;
-        b.addEventListener('click', ()=> { selectSection(s); });
+        b.addEventListener('click', ()=> selectSection(s) );
         sectionButtonsDiv.appendChild(b);
       });
 
@@ -145,24 +146,25 @@
         bookButtonsDiv.appendChild(b);
       });
 
-      // nav buttons
+      // nav and actions
       prevBtn.addEventListener('click', ()=> { if(currentStudent>1){ currentStudent--; loadStudent(); } });
       nextBtn.addEventListener('click', ()=> { if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } });
       clearBtn.addEventListener('click', clearCurrent);
       resetBtn.addEventListener('click', ()=>{ if(confirm('Reset ALL data?')){ data = {}; saveData(); loadStudent(); renderSummary(); }});
       exportBtn.addEventListener('click', exportAll);
+      focusRollBtn.addEventListener('click', ()=> { rollInput.focus(); });
 
       // roll input saves on change
       rollInput.addEventListener('input', ()=> {
         const rec = getRecord(currentClass, currentStudent, true);
-        rec.roll = rollInput.value.trim();
+        rec.roll = (rollInput.value || '').toString().trim();
         saveData();
       });
 
       // keyboard events
       window.addEventListener('keydown', handleKey);
 
-      // initial
+      // first load
       loadStudent();
       renderSummary();
     }
@@ -185,15 +187,15 @@
     function toggleExam(idx){
       const rec = getRecord(currentClass, currentStudent, true);
       const sub = SUBJECTS[idx];
-      const p = rec.exams.indexOf(sub);
-      if(p === -1) rec.exams.push(sub); else rec.exams.splice(p,1);
+      const pos = rec.exams.indexOf(sub);
+      if(pos === -1) rec.exams.push(sub); else rec.exams.splice(pos,1);
       saveData(); loadStudent(); renderSummary();
     }
     function toggleBook(idx){
       const rec = getRecord(currentClass, currentStudent, true);
       const sub = SUBJECTS[idx];
-      const p = rec.books.indexOf(sub);
-      if(p === -1) rec.books.push(sub); else rec.books.splice(p,1);
+      const pos = rec.books.indexOf(sub);
+      if(pos === -1) rec.books.push(sub); else rec.books.splice(pos,1);
       saveData(); loadStudent(); renderSummary();
     }
     function selectSection(s){
@@ -207,13 +209,12 @@
         delete data[currentClass][currentStudent];
         saveData();
       }
-      loadStudent();
-      renderSummary();
+      loadStudent(); renderSummary();
     }
 
-    // load current student into UI
+    // load current student record onto UI
     function loadStudent(){
-      // clear active states
+      // clear UI states
       document.querySelectorAll('#examButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#bookButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#sectionButtons .section-btn').forEach(b=>b.classList.remove('active'));
@@ -221,17 +222,17 @@
 
       const rec = getRecord(currentClass, currentStudent, false);
       if(rec){
-        // exams
+        // set exam buttons active
         rec.exams.forEach(sub=>{
           const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
         });
-        // books
+        // set book buttons active
         rec.books.forEach(sub=>{
           const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
         });
-        // section
+        // set section active
         if(rec.section){
           const secBtn = Array.from(sectionButtonsDiv.children).find(x => x.dataset.section === rec.section);
           if(secBtn) secBtn.classList.add('active');
@@ -253,51 +254,57 @@
 
     // keyboard handler
     function handleKey(e){
-      // if some input other than rollInput is focused, don't hijack
+      // if other input is focused (not rollInput) or textarea -> ignore
       const active = document.activeElement;
       const activeTag = active && active.tagName ? active.tagName.toUpperCase() : null;
       if(activeTag === 'INPUT' && active !== rollInput) return;
       if(activeTag === 'TEXTAREA') return;
 
       const key = e.key;
-      const keyUpper = key.toUpperCase();
+      const keyU = key.toUpperCase();
 
-      // Arrow navigation
-      if(key === 'ArrowRight'){ e.preventDefault(); if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } return; }
-      if(key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent>1){ currentStudent--; loadStudent(); } return; }
+      // navigation arrows
+      if(key === 'ArrowRight'){ e.preventDefault(); if(currentStudent < MAX_STUDENTS){ currentStudent++; loadStudent(); } return; }
+      if(key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent > 1){ currentStudent--; loadStudent(); } return; }
 
-      // If rollInput is focused, let typing happen for roll number
+      // If rollInput is focused, do nothing (allow user typing roll)
       if(document.activeElement === rollInput) return;
 
-      // Number keys 1..8 -> Exams
+      // Exams: 1..8
       if(/^[1-8]$/.test(key)){
         e.preventDefault();
-        const idx = Number(key)-1;
-        toggleExam(idx);
+        toggleExam(Number(key)-1);
         return;
       }
 
-      // Book keys Q W E R T Y U I
+      // Books: Q W E R T Y U I
       const bookOrder = ['Q','W','E','R','T','Y','U','I'];
-      const bidx = bookOrder.indexOf(keyUpper);
+      const bidx = bookOrder.indexOf(keyU);
       if(bidx >= 0){
         e.preventDefault();
         toggleBook(bidx);
         return;
       }
 
-      // Section keys Z X C V B -> A B C D E
-      const sectionMap = { 'Z':'A', 'X':'B', 'C':'C', 'V':'D', 'B':'E' };
-      if(sectionMap[keyUpper]){
+      // Sections: Z X C V B => A B C D E
+      const secMap = { 'Z':'A','X':'B','C':'C','V':'D','B':'E' };
+      if(secMap[keyU]){
         e.preventDefault();
-        selectSection(sectionMap[keyUpper]);
+        selectSection(secMap[keyU]);
         return;
       }
 
-      // Backspace / Delete handled normally when rollInput focused; when not focused ignore
+      // Focus roll input: F
+      if(keyU === 'F'){
+        e.preventDefault();
+        rollInput.focus();
+        return;
+      }
+
+      // otherwise do nothing
     }
 
-    // render summary: class-wise per-subject counts & money
+    // render summary
     function renderSummary(){
       const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
       if(classes.length === 0){
@@ -313,20 +320,17 @@
       for(const cls of classes){
         const examCount = Array(SUBJECTS.length).fill(0);
         const bookCount = Array(SUBJECTS.length).fill(0);
-        let examRevenue=0, bookRevenue=0;
+        let examRevenue = 0, bookRevenue = 0;
 
         for(const stu of Object.keys(data[cls])){
           const rec = data[cls][stu];
-          const recExams = Array.isArray(rec.exams) ? rec.exams : [];
-          const recBooks = Array.isArray(rec.books) ? rec.books : [];
-
-          recExams.forEach(sub => {
+          (rec.exams || []).forEach(sub => {
             const i = SUBJECTS.indexOf(sub);
-            if(i>=0){ examCount[i]++; examRevenue += EXAM_FEE; }
+            if(i >= 0){ examCount[i]++; examRevenue += EXAM_FEE; }
           });
-          recBooks.forEach(sub => {
+          (rec.books || []).forEach(sub => {
             const i = SUBJECTS.indexOf(sub);
-            if(i>=0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
+            if(i >= 0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
           });
         }
 
@@ -340,38 +344,38 @@
         html += `<td>₹${examRevenue}</td><td>₹${bookRevenue}</td><td>₹${classTotal}</td></tr>`;
       }
 
+      // grand total row
       html += `<tr style="font-weight:700"><td>Grand Total</td>`;
-      for(let i=0;i<SUBJECTS.length;i++){ html += `<td></td><td></td>`; }
+      for(let i=0;i<SUBJECTS.length;i++) html += `<td></td><td></td>`;
       html += `<td>₹${grandExam}</td><td>₹${grandBook}</td><td>₹${grandTotal}</td></tr>`;
-      html += '</table>';
 
+      html += '</table>';
       summaryTableContainer.innerHTML = html;
     }
 
-    // export: XLSX (2 sheets) if library exists, else CSV fallback (students then class summary)
+    // export
     function exportAll(){
-      // prepare rows Students
       const header = ["Class","StudentNumber","Section","Roll","ExamList","BookList","ExamCost","BookCost","Total"];
       SUBJECTS.forEach(s => { header.push(`${s} (Exam)`); header.push(`${s} (Book)`); });
-      const studentRows = [header];
+      const studentsRows = [header];
 
       const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
       for(const cls of classes){
         const students = Object.keys(data[cls]).map(Number).sort((a,b)=>a-b);
         for(const stu of students){
           const rec = data[cls][stu];
-          const exams = Array.isArray(rec.exams) ? rec.exams : [];
-          const books = Array.isArray(rec.books) ? rec.books : [];
+          const exams = rec.exams || [];
+          const books = rec.books || [];
           const examCost = (exams.length || 0) * EXAM_FEE;
-          const bookCost = (books.reduce((sum, sub) => sum + (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT), 0) || 0);
+          const bookCost = (books.reduce((sum, s) => sum + (s==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT), 0) || 0);
           const total = examCost + bookCost;
           const row = [cls, stu, rec.section || '', rec.roll || '', exams.join(', '), books.join(', '), examCost, bookCost, total];
-          SUBJECTS.forEach(s => { row.push(exams.includes(s) ? 1 : 0); row.push(books.includes(s) ? 1 : 0); });
-          studentRows.push(row);
+          SUBJECTS.forEach(s => { row.push(exams.includes(s)?1:0); row.push(books.includes(s)?1:0); });
+          studentsRows.push(row);
         }
       }
 
-      // prepare class summary rows
+      // class summary
       const classHeader = ["Class","Exam ₹","Book ₹","Total ₹"];
       SUBJECTS.forEach(s => { classHeader.push(`${s} (Exam)`); classHeader.push(`${s} (Book)`); });
       const classRows = [classHeader];
@@ -382,25 +386,25 @@
         for(const stu of Object.keys(data[cls])){
           const rec = data[cls][stu];
           (rec.exams || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ examCount[i]++; examRevenue+=EXAM_FEE; }});
-          (rec.books || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT);}});
+          (rec.books || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT); }});
         }
-        const r = [cls, examRevenue, bookRevenue, examRevenue+bookRevenue];
-        for(let i=0;i<SUBJECTS.length;i++){ r.push(examCount[i]); r.push(bookCount[i]); }
-        classRows.push(r);
+        const row = [cls, examRevenue, bookRevenue, examRevenue+bookRevenue];
+        for(let i=0;i<SUBJECTS.length;i++){ row.push(examCount[i]); row.push(bookCount[i]); }
+        classRows.push(row);
       }
 
       if(window.XLSX){
         const wb = XLSX.utils.book_new();
-        const ws1 = XLSX.utils.aoa_to_sheet(studentRows);
+        const ws1 = XLSX.utils.aoa_to_sheet(studentsRows);
         const ws2 = XLSX.utils.aoa_to_sheet(classRows);
         XLSX.utils.book_append_sheet(wb, ws1, 'Students');
         XLSX.utils.book_append_sheet(wb, ws2, 'ClassSummary');
         XLSX.writeFile(wb, 'olympiad_export.xlsx');
       } else {
-        // fallback: download two CSVs sequentially
-        downloadCSV(studentRows, 'olympiad_students.csv');
+        // fallback: download two CSV files
+        downloadCSV(studentsRows, 'olympiad_students.csv');
         downloadCSV(classRows, 'olympiad_class_summary.csv');
-        alert('XLSX library not available — exported CSV files.');
+        alert('XLSX library not available — exported CSV files for Students and ClassSummary.');
       }
     }
     function downloadCSV(rows, filename){
@@ -412,7 +416,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // start
+    // Start
     init();
 
   })();
