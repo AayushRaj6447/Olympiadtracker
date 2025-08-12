@@ -3,24 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Olympiad Tracker — Exams & Books</title>
+<title>Olympiad Tracker — Fixed Live Feed + Export</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 18px; background:#f4f6fb; color:#111 }
-  .card { max-width:1100px; margin: auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06) }
-  h1 { margin:0 0 12px 0; font-size:20px }
+  body { font-family: Arial, sans-serif; margin:18px; background:#f4f7fc; color:#111 }
+  .card { max-width:1150px; margin:auto; background:#fff; padding:16px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.06) }
+  h1 { margin:0 0 12px 0 }
   .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px }
-  label { font-weight:600; }
+  label { font-weight:600 }
   select, input[type="number"] { padding:6px; font-size:14px }
   .grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
-  .btn { padding:8px 10px; border:1px solid #cfcfcf; border-radius:6px; background:#fff; cursor:pointer; min-width:100px; text-align:center }
+  .btn { padding:8px 12px; border:1px solid #cfcfcf; border-radius:6px; background:#fff; cursor:pointer; min-width:110px; text-align:center }
   .btn.active { background:#2e8b57; color:#fff; border-color:#2e8b57 }
   .section-btn.active { background:#1565c0; color:#fff; border-color:#1565c0 }
   .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
-  .summary { margin-top:18px; }
+  .summary-box { margin-top:18px }
   table.summary-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px }
   table.summary-table th, table.summary-table td { border:1px solid #ddd; padding:6px; text-align:center }
-  .legend { margin-top:8px; font-size:13px; color:#444 }
-  .small { font-size:12px; color:#666 }
+  .small { font-size:12px; color:#444; margin-top:6px }
+  .note { color:#666; font-size:13px; margin-top:8px }
 </style>
 </head>
 <body>
@@ -32,41 +32,42 @@
       <select id="classSelect"></select>
 
       <label for="rollInput">Roll No</label>
-      <input id="rollInput" type="number" min="1" max="250" placeholder="(focus to type roll#)" />
+      <input id="rollInput" type="number" min="1" max="250" placeholder="focus to type roll number" />
 
       <label>Section</label>
       <div id="sectionButtons" class="grid"></div>
     </div>
 
     <div>
-      <h3 style="margin:8px 0 4px 0">Exams (₹150 each) — keys: <strong>1..8</strong></h3>
+      <h3>Exams (₹150 each) — Keys: 1..8</h3>
       <div id="examButtons" class="grid"></div>
     </div>
 
     <div>
-      <h3 style="margin:8px 0 4px 0">Books (₹100 each — Reasoning ₹250) — keys: <strong>Q W E R T Y U I</strong></h3>
+      <h3>Books (₹100 each — Reasoning ₹250) — Keys: Q W E R T Y U I</h3>
       <div id="bookButtons" class="grid"></div>
     </div>
 
     <div class="controls">
-      <button id="prevBtn" class="btn">← Previous</button>
+      <button id="prevBtn" class="btn">← Prev</button>
       <button id="nextBtn" class="btn">Next →</button>
       <button id="clearBtn" class="btn">Clear Current</button>
       <button id="resetBtn" class="btn">Reset All</button>
-      <button id="exportBtn" class="btn">Export Excel/CSV</button>
+      <button id="exportBtn" class="btn">Export (XLSX/CSV)</button>
     </div>
 
-    <div class="legend small">
-      Shortcuts: <strong>1–8</strong> toggle Exams (when Roll input not focused), <strong>Q W E R T Y U I</strong> toggle Books, <strong>Z X C V B</strong> select Sections A–E. Use ← / → for Prev/Next. Roll number typing works when Roll field is focused.
+    <div class="note">
+      Shortcuts (when Roll field NOT focused): 1–8 = Exam; Q W E R T Y U I = Book; Z X C V B = Section A–E; ← / → = Prev/Next. 
+      To type roll numbers, click the Roll No field (or focus it) and type.
     </div>
 
-    <div class="summary" id="summaryArea">
-      <h3>Live Summary</h3>
+    <div class="summary-box">
+      <h3>Live Summary (class-wise subject distribution)</h3>
       <div id="summaryTableContainer"></div>
     </div>
   </div>
 
-  <!-- XLSX library (if available online) -->
+  <!-- XLSX lib (online); code will fallback to CSV if not available -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
@@ -78,18 +79,18 @@
     const BOOK_PRICE_DEFAULT = 100;
     const BOOK_PRICE_REASONING = 250;
 
-    // DOM refs
+    // DOM
     const classSelect = document.getElementById('classSelect');
     const rollInput = document.getElementById('rollInput');
     const examButtonsDiv = document.getElementById('examButtons');
     const bookButtonsDiv = document.getElementById('bookButtons');
     const sectionButtonsDiv = document.getElementById('sectionButtons');
+    const summaryTableContainer = document.getElementById('summaryTableContainer');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const clearBtn = document.getElementById('clearBtn');
     const resetBtn = document.getElementById('resetBtn');
     const exportBtn = document.getElementById('exportBtn');
-    const summaryTableContainer = document.getElementById('summaryTableContainer');
 
     // data: data[classNumber][studentNumber] = { exams:[], books:[], section:'A'..'E', roll: '123' }
     let data = JSON.parse(localStorage.getItem('olympiadData') || '{}');
@@ -99,8 +100,8 @@
     let currentStudent = 1;
 
     // initialize UI
-    function initUI(){
-      // class options
+    function init(){
+      // class options 1..10
       for(let c=1;c<=10;c++){
         const opt = document.createElement('option');
         opt.value = c; opt.textContent = 'Class ' + c;
@@ -114,13 +115,13 @@
         renderSummary();
       });
 
-      // section buttons A..E (shortcut map Z X C V B)
+      // section buttons: Z X C V B => A..E
       ['A','B','C','D','E'].forEach(s=>{
         const b = document.createElement('button');
         b.className = 'btn section-btn';
         b.textContent = s;
         b.dataset.section = s;
-        b.addEventListener('click', ()=>{ selectSection(s); });
+        b.addEventListener('click', ()=> { selectSection(s); });
         sectionButtonsDiv.appendChild(b);
       });
 
@@ -134,7 +135,7 @@
         examButtonsDiv.appendChild(b);
       });
 
-      // book buttons Q-W-E-R-T-Y-U-I mapping
+      // book buttons Q W E R T Y U I
       SUBJECTS.forEach((sub,i)=>{
         const b = document.createElement('button');
         b.className = 'btn';
@@ -158,15 +159,15 @@
         saveData();
       });
 
-      // keyboard handling
+      // keyboard events
       window.addEventListener('keydown', handleKey);
 
-      // initial load
+      // initial
       loadStudent();
       renderSummary();
     }
 
-    // helpers
+    // data helpers
     function getRecord(cls, stu, createIfMissing = false){
       if(!data[cls]){
         if(!createIfMissing) return null;
@@ -178,22 +179,21 @@
       }
       return data[cls][stu];
     }
-
     function saveData(){ localStorage.setItem('olympiadData', JSON.stringify(data)); }
 
-    // toggle functions
-    function toggleExam(index){
+    // toggles
+    function toggleExam(idx){
       const rec = getRecord(currentClass, currentStudent, true);
-      const subject = SUBJECTS[index];
-      const pos = rec.exams.indexOf(subject);
-      if(pos === -1) rec.exams.push(subject); else rec.exams.splice(pos,1);
+      const sub = SUBJECTS[idx];
+      const p = rec.exams.indexOf(sub);
+      if(p === -1) rec.exams.push(sub); else rec.exams.splice(p,1);
       saveData(); loadStudent(); renderSummary();
     }
-    function toggleBook(index){
+    function toggleBook(idx){
       const rec = getRecord(currentClass, currentStudent, true);
-      const subject = SUBJECTS[index];
-      const pos = rec.books.indexOf(subject);
-      if(pos === -1) rec.books.push(subject); else rec.books.splice(pos,1);
+      const sub = SUBJECTS[idx];
+      const p = rec.books.indexOf(sub);
+      if(p === -1) rec.books.push(sub); else rec.books.splice(p,1);
       saveData(); loadStudent(); renderSummary();
     }
     function selectSection(s){
@@ -211,22 +211,22 @@
       renderSummary();
     }
 
+    // load current student into UI
     function loadStudent(){
-      // clear UI toggles
+      // clear active states
       document.querySelectorAll('#examButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#bookButtons .btn').forEach(b=>b.classList.remove('active'));
       document.querySelectorAll('#sectionButtons .section-btn').forEach(b=>b.classList.remove('active'));
       rollInput.value = '';
 
-      // fill if exists
       const rec = getRecord(currentClass, currentStudent, false);
       if(rec){
-        // set exam buttons
+        // exams
         rec.exams.forEach(sub=>{
           const btn = Array.from(examButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
         });
-        // set book buttons
+        // books
         rec.books.forEach(sub=>{
           const btn = Array.from(bookButtonsDiv.children).find(x => x.dataset.sub === sub);
           if(btn) btn.classList.add('active');
@@ -243,10 +243,9 @@
     }
 
     function updatePosition(){
-      // show current student position near controls (append if not present)
       let pos = document.getElementById('positionDisplay');
       if(!pos){
-        pos = document.createElement('div'); pos.id = 'positionDisplay'; pos.style.marginTop = '8px';
+        pos = document.createElement('div'); pos.id = 'positionDisplay'; pos.style.marginTop='8px';
         document.querySelector('.card').insertBefore(pos, summaryTableContainer.parentNode);
       }
       pos.textContent = `Class ${currentClass} • Student ${currentStudent}`;
@@ -254,28 +253,26 @@
 
     // keyboard handler
     function handleKey(e){
+      // if some input other than rollInput is focused, don't hijack
       const active = document.activeElement;
       const activeTag = active && active.tagName ? active.tagName.toUpperCase() : null;
-
-      // If typing in any input (except rollInput) or textarea, don't intercept
       if(activeTag === 'INPUT' && active !== rollInput) return;
       if(activeTag === 'TEXTAREA') return;
 
-      // Section keys: Z X C V B => A B C D E
-      const secMap = { 'Z':'A', 'X':'B', 'C':'C', 'V':'D', 'B':'E' };
-      const keyUpper = e.key.toUpperCase();
+      const key = e.key;
+      const keyUpper = key.toUpperCase();
 
-      // Arrow keys navigation
-      if(e.key === 'ArrowRight'){ e.preventDefault(); if(currentStudent < MAX_STUDENTS) { currentStudent++; loadStudent(); } return; }
-      if(e.key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent > 1) { currentStudent--; loadStudent(); } return; }
+      // Arrow navigation
+      if(key === 'ArrowRight'){ e.preventDefault(); if(currentStudent<MAX_STUDENTS){ currentStudent++; loadStudent(); } return; }
+      if(key === 'ArrowLeft'){ e.preventDefault(); if(currentStudent>1){ currentStudent--; loadStudent(); } return; }
 
-      // If rollInput is focused: let typing and backspace behave normally (user types roll)
-      if(document.activeElement === rollInput) return; // avoid hijacking keys while user types roll
+      // If rollInput is focused, let typing happen for roll number
+      if(document.activeElement === rollInput) return;
 
-      // Number keys 1..8 -> toggle exams (only when rollInput is NOT focused)
-      if(/^[1-8]$/.test(e.key)){
+      // Number keys 1..8 -> Exams
+      if(/^[1-8]$/.test(key)){
         e.preventDefault();
-        const idx = Number(e.key) - 1;
+        const idx = Number(key)-1;
         toggleExam(idx);
         return;
       }
@@ -289,18 +286,18 @@
         return;
       }
 
-      // Section keys
-      if(secMap[keyUpper]){
+      // Section keys Z X C V B -> A B C D E
+      const sectionMap = { 'Z':'A', 'X':'B', 'C':'C', 'V':'D', 'B':'E' };
+      if(sectionMap[keyUpper]){
         e.preventDefault();
-        selectSection(secMap[keyUpper]);
+        selectSection(sectionMap[keyUpper]);
         return;
       }
 
-      // If user types digits while rollInput is not focused, we decided to interpret them as exam toggles above.
-      // So nothing else to do.
+      // Backspace / Delete handled normally when rollInput focused; when not focused ignore
     }
 
-    // Render summary: class-wise table with exam/book counts and revenue
+    // render summary: class-wise per-subject counts & money
     function renderSummary(){
       const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
       if(classes.length === 0){
@@ -308,17 +305,15 @@
         return;
       }
 
-      // table header
       let html = '<table class="summary-table"><tr><th>Class</th>';
       SUBJECTS.forEach(s => { html += `<th>${s} (Exam)</th><th>${s} (Book)</th>`; });
       html += '<th>Exam ₹</th><th>Book ₹</th><th>Total ₹</th></tr>';
 
-      let grandExam = 0, grandBook = 0, grandTotal = 0;
-
+      let grandExam=0, grandBook=0, grandTotal=0;
       for(const cls of classes){
         const examCount = Array(SUBJECTS.length).fill(0);
         const bookCount = Array(SUBJECTS.length).fill(0);
-        let examRevenue = 0, bookRevenue = 0;
+        let examRevenue=0, bookRevenue=0;
 
         for(const stu of Object.keys(data[cls])){
           const rec = data[cls][stu];
@@ -327,11 +322,11 @@
 
           recExams.forEach(sub => {
             const i = SUBJECTS.indexOf(sub);
-            if(i >= 0){ examCount[i]++; examRevenue += EXAM_FEE; }
+            if(i>=0){ examCount[i]++; examRevenue += EXAM_FEE; }
           });
           recBooks.forEach(sub => {
             const i = SUBJECTS.indexOf(sub);
-            if(i >= 0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
+            if(i>=0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }
           });
         }
 
@@ -345,23 +340,20 @@
         html += `<td>₹${examRevenue}</td><td>₹${bookRevenue}</td><td>₹${classTotal}</td></tr>`;
       }
 
-      // grand row
       html += `<tr style="font-weight:700"><td>Grand Total</td>`;
-      for(let i=0;i<SUBJECTS.length;i++) html += `<td></td><td></td>`;
+      for(let i=0;i<SUBJECTS.length;i++){ html += `<td></td><td></td>`; }
       html += `<td>₹${grandExam}</td><td>₹${grandBook}</td><td>₹${grandTotal}</td></tr>`;
-
       html += '</table>';
+
       summaryTableContainer.innerHTML = html;
     }
 
-    // Export all data:
-    // Sheet1: Students (detailed); Sheet2: ClassSummary
+    // export: XLSX (2 sheets) if library exists, else CSV fallback (students then class summary)
     function exportAll(){
-      const rowsStudents = [];
-      // header
+      // prepare rows Students
       const header = ["Class","StudentNumber","Section","Roll","ExamList","BookList","ExamCost","BookCost","Total"];
       SUBJECTS.forEach(s => { header.push(`${s} (Exam)`); header.push(`${s} (Book)`); });
-      rowsStudents.push(header);
+      const studentRows = [header];
 
       const classes = Object.keys(data).map(Number).sort((a,b)=>a-b);
       for(const cls of classes){
@@ -375,58 +367,54 @@
           const total = examCost + bookCost;
           const row = [cls, stu, rec.section || '', rec.roll || '', exams.join(', '), books.join(', '), examCost, bookCost, total];
           SUBJECTS.forEach(s => { row.push(exams.includes(s) ? 1 : 0); row.push(books.includes(s) ? 1 : 0); });
-          rowsStudents.push(row);
+          studentRows.push(row);
         }
       }
 
-      // Class summary sheet
-      const rowsClass = [];
-      const headerC = ["Class","Total Exam ₹","Total Book ₹","Total ₹"];
-      // add per-subject counts
-      SUBJECTS.forEach(s => { headerC.push(`${s} (Exam)`); headerC.push(`${s} (Book)`); });
-      rowsClass.push(headerC);
-
+      // prepare class summary rows
+      const classHeader = ["Class","Exam ₹","Book ₹","Total ₹"];
+      SUBJECTS.forEach(s => { classHeader.push(`${s} (Exam)`); classHeader.push(`${s} (Book)`); });
+      const classRows = [classHeader];
       for(const cls of classes){
         const examCount = Array(SUBJECTS.length).fill(0);
         const bookCount = Array(SUBJECTS.length).fill(0);
-        let examRevenue = 0, bookRevenue = 0;
+        let examRevenue=0, bookRevenue=0;
         for(const stu of Object.keys(data[cls])){
           const rec = data[cls][stu];
-          const recExams = Array.isArray(rec.exams) ? rec.exams : [];
-          const recBooks = Array.isArray(rec.books) ? rec.books : [];
-          recExams.forEach(sub => { const i = SUBJECTS.indexOf(sub); if(i>=0){ examCount[i]++; examRevenue += EXAM_FEE; }});
-          recBooks.forEach(sub => { const i = SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub === 'Reasoning' ? BOOK_PRICE_REASONING : BOOK_PRICE_DEFAULT); }});
+          (rec.exams || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ examCount[i]++; examRevenue+=EXAM_FEE; }});
+          (rec.books || []).forEach(sub => { const i=SUBJECTS.indexOf(sub); if(i>=0){ bookCount[i]++; bookRevenue += (sub==='Reasoning'?BOOK_PRICE_REASONING:BOOK_PRICE_DEFAULT);}});
         }
-        const row = [cls, examRevenue, bookRevenue, examRevenue + bookRevenue];
-        SUBJECTS.forEach((_,i)=>{ row.push(examCount[i]); row.push(bookCount[i]); });
-        rowsClass.push(row);
+        const r = [cls, examRevenue, bookRevenue, examRevenue+bookRevenue];
+        for(let i=0;i<SUBJECTS.length;i++){ r.push(examCount[i]); r.push(bookCount[i]); }
+        classRows.push(r);
       }
 
-      // Try to use XLSX lib if loaded
       if(window.XLSX){
         const wb = XLSX.utils.book_new();
-        const ws1 = XLSX.utils.aoa_to_sheet(rowsStudents);
-        const ws2 = XLSX.utils.aoa_to_sheet(rowsClass);
-        XLSX.utils.book_append_sheet(wb, ws1, "Students");
-        XLSX.utils.book_append_sheet(wb, ws2, "ClassSummary");
-        XLSX.writeFile(wb, "olympiad_export.xlsx");
+        const ws1 = XLSX.utils.aoa_to_sheet(studentRows);
+        const ws2 = XLSX.utils.aoa_to_sheet(classRows);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Students');
+        XLSX.utils.book_append_sheet(wb, ws2, 'ClassSummary');
+        XLSX.writeFile(wb, 'olympiad_export.xlsx');
       } else {
-        // fallback: produce CSV for students only, and a second csv for class summary (download zipped is complex), so offer students csv.
-        const csv = rowsStudents.map(r => r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'olympiad_students.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert('XLSX library not available: exported CSV of student data. To export .xlsx, enable internet or include the XLSX library.');
+        // fallback: download two CSVs sequentially
+        downloadCSV(studentRows, 'olympiad_students.csv');
+        downloadCSV(classRows, 'olympiad_class_summary.csv');
+        alert('XLSX library not available — exported CSV files.');
       }
     }
+    function downloadCSV(rows, filename){
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
-    // Start
-    initUI();
+    // start
+    init();
 
-    // small safety: ensure loadStudent exists in this scope (it does)
-    // end of IIFE
   })();
   </script>
 </body>
